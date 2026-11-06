@@ -36,6 +36,9 @@ export interface SessionUser {
   regionId: string;
   spbuId: string;
   isDemo?: boolean;
+  profileName?: string;
+  employeeId?: string;
+  phone?: string;
 }
 
 export async function createSession(u: SessionUser) {
@@ -60,9 +63,19 @@ export async function getSession(): Promise<SessionUser | null> {
     const store = await getStore();
     const u = (await store.list("USERS")).find((x) => x.user_id === payload.userId);
     if (!u || u.is_active !== "1") return null;
+    const personalName = (u.profile_name || "").trim();
     return {
-      userId: u.user_id, username: u.username, name: u.full_name, role: u.role_id as RoleId,
-      regionId: u.region_id, spbuId: u.spbu_id, isDemo: u.is_demo === "1",
+      userId: u.user_id,
+      username: u.username,
+      name: personalName || u.full_name,
+      role: u.role_id as RoleId,
+      regionId: u.region_id,
+      spbuId: u.spbu_id,
+      isDemo: u.is_demo === "1",
+      profileName: personalName,
+      employeeId: (u.employee_id || "").trim(),
+      phone: (u.phone || "").trim(),
+    };
     };
   } catch {
     return null;

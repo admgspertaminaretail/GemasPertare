@@ -1,9 +1,9 @@
 import { LocalStore, SheetsStore, Store } from "./store";
 import { buildSeed } from "./seed";
-import { Row, TABLES, TableName } from "./schema";
+import { Row, SCHEMA, TABLES, TableName } from "./schema";
 import { autoInitializeGoogleWorkspace, getActiveDbDriver, getActiveSheetsId, loadGoogleCredentials } from "./google";
 
-const STORE_VER = `v2-${TABLES.length}`;
+const STORE_VER = `v3-${TABLES.length}-${TABLES.reduce((acc, t) => acc + SCHEMA[t].length, 0)}`;
 const g = globalThis as unknown as { __gemasStore?: Promise<Store>; __gemasStoreVer?: string };
 
 /** Mengambil seluruh isi database lokal (atau membangun seed awal bila db.json belum ada). */

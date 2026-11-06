@@ -39,7 +39,7 @@ export const KNOWLEDGE_CATEGORIES = [
   "TKI",
   "Jadwal Retensi (JRDP)",
   "Buku Saku",
-  "Materi Sprint",
+  "Sprint (Surat Perintah)",
   "Manual Book",
   "Lainnya",
 ];

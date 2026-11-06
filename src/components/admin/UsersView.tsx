@@ -27,12 +27,26 @@ export function UsersView({ users, regions, spbus, meId }: { users: R[]; regions
   const f = edit?.form;
   return (
     <>
-      <DataTable rows={users} rowKey={(r) => r.user_id} pageSize={15} exportName="pengguna" searchPlaceholder="Cari nama, username, SPBU…"
+      <DataTable rows={users} rowKey={(r) => r.user_id} pageSize={15} exportName="pengguna" searchPlaceholder="Cari nama, nomor pegawai, telepon, username, SPBU…"
         filters={[{ label: "Role", get: (r) => ROLE_LABEL[r.role_id as RoleId] || r.role_id }, { label: "Region", get: (r) => r.region_name }, { label: "Status", get: (r) => (r.is_active === "1" ? "Aktif" : "Nonaktif"), options: ["Aktif", "Nonaktif"] }]}
         toolbar={<button className="btn-primary btn-sm" onClick={() => { setEdit({ form: { ...blank } }); setSpq(""); }}><Plus className="h-4 w-4" />Tambah Pengguna</button>}
         columns={[
           { key: "username", header: "Username", render: (r) => <span className="font-mono text-xs">{r.username}{r.is_demo === "1" && <> <DemoTag /></>}</span>, value: (r) => r.username },
-          { key: "full_name", header: "Nama" },
+          {
+            key: "full_name",
+            header: "Nama Akun / Pegawai",
+            render: (r) => (
+              <div>
+                <div className="font-semibold text-navy">{r.profile_name || r.full_name}</div>
+                {r.profile_name && r.profile_name !== r.full_name && (
+                  <div className="text-[11px] text-slate-400">Akun: {r.full_name}</div>
+                )}
+              </div>
+            ),
+            value: (r) => r.profile_name || r.full_name,
+          },
+          { key: "employee_id", header: "No. Pegawai", render: (r) => r.employee_id || <span className="text-xs text-slate-400">Belum diisi</span>, value: (r) => r.employee_id || "" },
+          { key: "phone", header: "No. Telepon", render: (r) => r.phone || <span className="text-xs text-slate-400">Belum diisi</span>, value: (r) => r.phone || "" },
           { key: "role_id", header: "Role", render: (r) => ROLE_LABEL[r.role_id as RoleId], value: (r) => ROLE_LABEL[r.role_id as RoleId] },
           { key: "unit", header: "Lingkup", render: (r) => r.spbu_name || r.region_name || "Seluruh Region", value: (r) => r.spbu_name || r.region_name || "Seluruh Region" },
           { key: "last_login", header: "Login terakhir", render: (r) => (r.last_login ? fmtDateTime(r.last_login) : "-"), value: (r) => r.last_login },

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { listTemplates } from "@/lib/services/content";
 import { TemplatesView } from "@/components/info/TemplatesView";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
   const u = await requireUser();
+  if (u.role === "ADMIN_SPBU") redirect("/submissions");
   const rows = await listTemplates(u);
   return (
     <>

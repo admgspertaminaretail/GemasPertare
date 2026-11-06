@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { FileSpreadsheet } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { listIbosExtracts } from "@/lib/services/ibos";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TarikanIbosPage() {
   const u = await requireUser();
+  if (u.role === "ADMIN_SPBU") redirect("/submissions");
   const data = await listIbosExtracts(u);
   const canManage = u.role === "ADMIN_PAM";
 

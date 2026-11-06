@@ -235,7 +235,7 @@ export async function createSubmission(u: SessionUser, fd: FormData) {
     excel = await validateUpload(fileList(fd, "excel")[0], "excel", "Excel Daftar Arsip Usul Musnah");
     parsedExcel = await parseExcelStructured(excel, "Daftar Arsip Usul Musnah (Excel)");
   } catch (e: any) { errors.push(e.message); }
-  try { fupa = await validateUpload(fileList(fd, "fupa")[0], "pdf", "PDF Form FUPA (ditandatangani ABH)"); } catch (e: any) { errors.push(e.message); }
+  try { fupa = await validateUpload(fileList(fd, "fupa")[0], "pdf", "PDF Arsip Usul Musnah"); } catch (e: any) { errors.push(e.message); }
   const pf = fileList(fd, "photos");
   if (!pf.length) errors.push("Foto kondisi fisik arsip wajib diunggah (minimal 1).");
   if (pf.length > 10) errors.push("Foto maksimal 10 berkas.");
@@ -305,7 +305,7 @@ export async function resubmit(u: SessionUser, sid: string, fd: FormData) {
   const photos: ValidatedFile[] = [];
   const e0 = fileList(fd, "excel")[0], f0 = fileList(fd, "fupa")[0], pf = fileList(fd, "photos");
   if (e0) try { excel = await validateUpload(e0, "excel", "Excel Daftar Arsip"); parsedExcel = await parseExcelStructured(excel, "Excel Daftar Arsip"); } catch (e: any) { errors.push(e.message); }
-  if (f0) try { fupa = await validateUpload(f0, "pdf", "PDF FUPA"); } catch (e: any) { errors.push(e.message); }
+  if (f0) try { fupa = await validateUpload(f0, "pdf", "PDF Arsip Usul Musnah"); } catch (e: any) { errors.push(e.message); }
   for (const p of pf.slice(0, 10)) try { photos.push(await validateUpload(p, "image", `Foto ${p.name}`)); } catch (e: any) { errors.push(e.message); }
   if (!e0 && !f0 && !pf.length) errors.push("Unggah minimal satu dokumen hasil perbaikan.");
   if (errors.length) throw new HttpError(400, errors.join(" "));

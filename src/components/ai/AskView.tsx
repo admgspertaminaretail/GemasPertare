@@ -11,7 +11,7 @@ interface Msg { role: "user" | "bot"; text: string; sources?: Src[]; links?: { l
 const SUGGEST = [
   "Bagaimana alur pengajuan usul musnah arsip?",
   "Apa arti status “Perlu Revisi” dan apa yang harus saya lakukan?",
-  "Di mana saya bisa mengunduh template Form FUPA?",
+  "Di mana saya bisa mengunduh Data Arsip Per Bulan & Template Daftar Arsip?",
   "Bagaimana cara membaca JRDP untuk menentukan masa retensi?",
   "Bagaimana cara melakukan pooling FUPA Regional?",
 ];

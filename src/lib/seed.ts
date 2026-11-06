@@ -150,7 +150,7 @@ export async function buildSeed(opts: SeedOptions = { demo: true }): Promise<Db>
     ["TKI C001 dan C002", "TKI", "Tata Kerja Individu terkait pengelolaan arsip."],
     ["Jadwal Retensi Dokumen Perusahaan (JRDP)", "Jadwal Retensi (JRDP)", "Daftar masa retensi dokumen perusahaan."],
     ["Buku Saku Lapangan Pengelolaan Arsip", "Buku Saku", "Ringkasan praktis pengelolaan arsip untuk petugas lapangan."],
-    ["Materi Sprint Tim Arsip", "Materi Sprint", "Materi sosialisasi Sprint Tim Arsip."],
+    ["Sprint (Surat Perintah) Pengelolaan Arsip", "Sprint (Surat Perintah)", "Surat perintah resmi terkait pengelolaan dan pemusnahan arsip."],
     ["Manual Book Admin Unit - Penggunaan i-BOS", "Manual Book", "Panduan penggunaan i-BOS untuk Admin Unit."],
   ];
   kd.forEach(([title, cat, desc], i) =>

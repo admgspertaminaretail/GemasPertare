@@ -18,7 +18,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     unit = `${s?.name || u.spbuId} · ${r?.region_name || ""}`;
   }
   return (
-    <Shell user={{ name: u.name, username: u.username, role: u.role, roleLabel: ROLE_LABEL[u.role], unit, demo: !!u.isDemo && process.env.DEMO_MODE !== "false" }}>
+    <Shell
+      user={{
+        name: u.name,
+        username: u.username,
+        role: u.role,
+        roleLabel: ROLE_LABEL[u.role],
+        unit,
+        demo: !!u.isDemo && process.env.DEMO_MODE !== "false",
+        profileName: u.profileName || "",
+        employeeId: u.employeeId || "",
+        phone: u.phone || "",
+      }}
+    >
       {children}
     </Shell>
   );

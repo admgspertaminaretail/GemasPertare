@@ -193,6 +193,36 @@ export async function changeOwnPassword(u: SessionUser, current: string, next: s
   await logActivity(u, "UBAH_KATA_SANDI", "USER", u.userId);
 }
 
+export async function updateOwnProfile(
+  u: SessionUser,
+  input: { profile_name?: string; employee_id?: string; phone?: string }
+) {
+  const profileName = (input.profile_name || "").trim();
+  const employeeId = (input.employee_id || "").trim();
+  const phone = (input.phone || "").trim();
+  if (profileName.length < 2) throw new HttpError(400, "Nama lengkap wajib diisi (minimal 2 karakter).");
+  if (employeeId.length < 2) throw new HttpError(400, "Nomor pegawai wajib diisi.");
+  if (!/^[0-9+\-\s()]{7,22}$/.test(phone)) {
+    throw new HttpError(400, "Nomor telepon tidak valid (gunakan angka, minimal 7 digit).");
+  }
+  const store = await getStore();
+  const me = (await store.list("USERS")).find((x) => x.user_id === u.userId);
+  if (!me) throw new HttpError(404, "Akun pengguna tidak ditemukan.");
+  await store.update("USERS", u.userId, {
+    profile_name: profileName,
+    employee_id: employeeId,
+    phone,
+  });
+  await logActivity(
+    { ...u, name: profileName },
+    "UPDATE_PROFIL_PEGAWAI",
+    "USER",
+    u.userId,
+    `${profileName} · Nopek: ${employeeId} · Telp: ${phone}`
+  );
+  return { profile_name: profileName, employee_id: employeeId, phone };
+}
+
 /* ------------------------------------------------------------- audit trail */
 export async function listActivity(u: SessionUser) {
   if (u.role === "ADMIN_SPBU") throw new HttpError(403, "Tidak memiliki akses audit trail.");

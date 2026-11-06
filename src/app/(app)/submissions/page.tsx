@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { getStore } from "@/lib/db";
 import { listSubmissions, listPoolings, listMemos, listPoolable, listMemoablePoolings } from "@/lib/services/submissions";
+import { listIbosExtracts } from "@/lib/services/ibos";
 import { SubmissionsHub } from "@/components/submissions/SubmissionsHub";
 import { PageHeader } from "@/components/ui/kit";
 import { Download, FilePlus2, Plus } from "lucide-react";
@@ -12,23 +13,20 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
   const u = await requireUser();
   const isRegion = u.role === "ADMIN_REGION";
   const store = await getStore();
-  const [subs, poolings, memos, poolable, memoable, templates] = await Promise.all([
+  const [subs, poolings, memos, poolable, memoable, templates, ibosData] = await Promise.all([
     listSubmissions(u),
     listPoolings(u),
     listMemos(u),
     isRegion ? listPoolable(u) : Promise.resolve([]),
     isRegion ? listMemoablePoolings(u) : Promise.resolve([]),
     store.list("TEMPLATES"),
+    listIbosExtracts(u),
   ]);
 
   const activeTpls = templates.filter((t) => t.status === "Aktif");
   const daftarArsipTpl =
     activeTpls.find((t) => t.category === "Daftar Arsip") ||
     activeTpls.find((t) => /daftar arsip/i.test(t.name)) ||
-    null;
-  const fupaTpl =
-    activeTpls.find((t) => t.category === "Form FUPA") ||
-    activeTpls.find((t) => /fupa/i.test(t.name)) ||
     null;
 
   const allowedTabs = u.role === "ADMIN_SPBU" ? ["pengajuan"] : ["pengajuan", "pooling", "memo"];
@@ -74,13 +72,11 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
         memos={memos}
         poolable={poolable}
         memoable={memoable}
+        ibosItems={ibosData.items}
         daftarArsipTemplate={
           daftarArsipTpl
             ? { id: daftarArsipTpl.template_id, name: daftarArsipTpl.name, version: daftarArsipTpl.version }
             : null
-        }
-        fupaTemplate={
-          fupaTpl ? { id: fupaTpl.template_id, name: fupaTpl.name, version: fupaTpl.version } : null
         }
       />
     </>

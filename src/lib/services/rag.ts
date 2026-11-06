@@ -13,13 +13,13 @@ const tok = (s: string) =>
 /** Panduan fungsi aplikasi GEMAS (bukan kebijakan perusahaan). Ditandai terpisah dalam jawaban. */
 export const APP_GUIDE: { page: string; title: string; text: string }[] = [
   { page: "Alur Pengajuan", title: "Alur pengajuan usul musnah di GEMAS", text:
-    "Alur pengajuan usul musnah arsip di GEMAS: (1) Admin SPBU mengunduh data tarikan i-BOS dari Pusat Template, menyaring data, menyusun daftar arsip dan memotret kondisi fisik arsip. (2) Admin SPBU membuka menu Pengajuan Usul Musnah Arsip, klik Buat Pengajuan, lalu mengunggah Excel Daftar Arsip Usul Musnah, PDF Form FUPA yang sudah ditandatangani ABH, dan foto kondisi fisik arsip. (3) PIC Region mereview: Disetujui atau Perlu Revisi dengan catatan. (4) PIC Region melakukan pooling pengajuan yang disetujui ke satu FUPA Regional. (5) PIC Region mencatat nomor dan tanggal MEMO. (6) PIC Region mencatat apakah MEMO sudah diteruskan ke PAM. Persetujuan Manager/VP dan pembuatan MEMO dilakukan di luar GEMAS." },
+    "Alur pengajuan usul musnah arsip di GEMAS: (1) Admin SPBU membuka menu Pengajuan Usul Musnah, klik pintasan Data Arsip Per Bulan untuk melihat/mengunduh tarikan bulanan i-BOS dari Admin GS, lalu mengunduh Template Daftar Arsip Usul Musnah dan memotret kondisi fisik arsip. (2) Admin SPBU klik Buat Pengajuan, mengisi Keterangan Pengajuan (wajib), lalu mengunggah Excel Daftar Arsip Usul Musnah, PDF Arsip Usul Musnah, dan foto kondisi fisik arsip. (3) PIC Region mereview: Disetujui atau Perlu Revisi dengan catatan. (4) PIC Region melakukan pooling pengajuan yang disetujui ke satu FUPA Regional. (5) PIC Region mencatat nomor dan tanggal MEMO serta status penerusan ke PAM." },
   { page: "Status", title: "Arti status pengajuan", text:
     "Status pengajuan di GEMAS: PIC SPBU Sudah Upload; PIC Region Perlu Review; Perlu Revisi (SPBU harus memperbaiki dokumen sesuai catatan revisi); Disetujui; Sudah Masuk Pooling (sudah tergabung dalam FUPA Regional); Sudah Di-Memo (MEMO Regional sudah dicatat). Penerusan MEMO ke PAM adalah informasi monitoring terpisah." },
   { page: "Revisi", title: "Cara mengunggah revisi", text:
     "Jika status Perlu Revisi, Admin SPBU membuka detail pengajuan, membaca catatan revisi PIC Region, lalu klik Unggah Revisi dan mengunggah dokumen perbaikan. Dokumen lama tidak dihapus; semua versi tersimpan dengan ID revisi seperti SUB-001-R1 dan SUB-001-R2." },
   { page: "Menu", title: "Menu utama GEMAS", text:
-    "Menu GEMAS: Dashboard Monitoring (ringkasan dan progres), Pusat Informasi Arsip (pedoman, TKI, JRDP, buku saku, materi, manual book i-BOS), Pusat Template (template data i-BOS, Form FUPA, Daftar Arsip Usul Musnah), Pengajuan Usul Musnah Arsip (pengajuan, pooling, MEMO), dan Tanya si GEMAS (asisten AI)." },
+    "Menu GEMAS: Beranda (galeri informasi arsip, ringkasan progress total pengajuan, grafik 7 Region, dan Peringkat Top 3), Pengajuan Usul Musnah (pengajuan, pintasan Data Arsip Per Bulan & Template Daftar Arsip, pooling, MEMO), Pusat Informasi Arsip (infografis pemusnahan arsip, Pedoman, TKI, JRDP, Buku Saku, Sprint (Surat Perintah), Manual Book i-BOS dengan fitur Baca/Preview langsung), serta Tanya si GEMAS (asisten AI)." },
   { page: "Pooling", title: "Pooling FUPA Regional", text:
     "Pooling dilakukan PIC Region di menu Pengajuan Usul Musnah Arsip, tab Pooling FUPA: pilih beberapa pengajuan berstatus Disetujui dengan checkbox, isi Nomor FUPA Regional dan tanggal pooling, lalu klik Buat Pooling. Satu pengajuan tidak dapat masuk dua pooling aktif sekaligus; pembatalan pooling harus disertai alasan." },
   { page: "MEMO", title: "Pencatatan MEMO dan penerusan ke PAM", text:
@@ -145,17 +145,15 @@ async function findLinks(question: string): Promise<AiAnswer["links"]> {
   const store = await getStore();
   const q = tok(question);
   const links: AiAnswer["links"] = [];
-  if (q.some((w) => ["template", "form", "fupa", "unduh", "download", "format", "ibos", "bos"].includes(w))) {
-    for (const t of (await store.list("TEMPLATES")).filter((t) => t.status === "Aktif")) {
-      const tt = tok(t.name + " " + t.category);
-      if (tt.some((w) => q.includes(w) && !["template", "data", "daftar"].includes(w)) || q.includes("template"))
-        links.push({ label: `Unduh: ${t.name}`, href: `/api/files/template/${t.template_id}` });
+  if (q.some((w) => ["template", "form", "fupa", "unduh", "download", "format", "ibos", "bos", "bulanan"].includes(w))) {
+    for (const t of (await store.list("TEMPLATES")).filter((t) => t.status === "Aktif" && t.category === "Daftar Arsip")) {
+      links.push({ label: `Unduh: ${t.name}`, href: `/api/files/template/${t.template_id}` });
     }
-    links.push({ label: "Buka Pusat Template", href: "/templates" });
+    links.push({ label: "Buka Pengajuan Usul Musnah", href: "/submissions" });
   }
   if (q.some((w) => ["ajukan", "pengajuan", "musnah", "pemusnahan", "revisi", "pooling", "memo"].includes(w))) links.push({ label: "Buka Pengajuan Usul Musnah Arsip", href: "/submissions" });
-  if (q.some((w) => ["jrdp", "retensi", "pedoman", "tki", "buku", "manual"].includes(w))) links.push({ label: "Buka Pusat Informasi Arsip", href: "/info" });
-  if (q.some((w) => ["dashboard", "monitoring", "progres"].includes(w))) links.push({ label: "Buka Dashboard Monitoring", href: "/dashboard" });
+  if (q.some((w) => ["jrdp", "retensi", "pedoman", "tki", "buku", "manual", "sprint"].includes(w))) links.push({ label: "Buka Pusat Informasi Arsip", href: "/info" });
+  if (q.some((w) => ["beranda", "home", "dashboard", "monitoring", "progres", "peringkat", "region"].includes(w))) links.push({ label: "Buka Beranda & Progress Pengajuan", href: "/home" });
   return links.filter((l, i, a) => a.findIndex((x) => x.href === l.href) === i).slice(0, 5);
 }
 

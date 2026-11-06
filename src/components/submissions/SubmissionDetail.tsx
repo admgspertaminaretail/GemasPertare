@@ -15,7 +15,7 @@ import { DOC_TYPE, FORWARD, STATUS } from "@/lib/constants";
 type R = Record<string, any>;
 const DOC_LABEL: Record<string, string> = {
   [DOC_TYPE.EXCEL]: "Excel Daftar Arsip Usul Musnah",
-  [DOC_TYPE.FUPA]: "PDF Form FUPA (ditandatangani ABH)",
+  [DOC_TYPE.FUPA]: "PDF Arsip Usul Musnah",
 };
 
 export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: R; documents: R[]; photos: R[]; revisions: R[]; history: R[]; forwarding: R | null }; role: string }) {
@@ -138,7 +138,7 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
                 {revisions.map((r) => (
                   <li key={r.revision_id} className="rounded-xl bg-cloud p-4">
                     <div className="flex flex-wrap items-center gap-2"><span className="chip bg-red-50 text-prtred ring-red-200">{r.revision_id}</span>{r.resubmitted_at ? <span className="chip bg-emerald-50 text-emerald-700 ring-emerald-200">Sudah diperbaiki</span> : <span className="chip bg-amber-50 text-amber-800 ring-amber-200">Menunggu perbaikan</span>}</div>
-                    <p className="mt-2 text-sm"><b>Catatan PIC Region:</b> {r.requested_note}</p><p className="text-xs text-slate-500">{r.requested_by_name} · {fmtDateTime(pending?.revision_id === r.revision_id ? r.requested_at : r.requested_at)}</p>
+                    <p className="mt-2 text-sm"><b>Catatan PIC Region:</b> {r.requested_note}</p><p className="text-xs text-slate-500">{r.requested_by_name} · {fmtDateTime(r.requested_at)}</p>
                     {r.resubmitted_at && <p className="mt-2 text-sm"><b>Perbaikan SPBU:</b> {r.resubmit_note || "Dokumen revisi diunggah."} <span className="text-xs text-slate-500">· {fmtDateTime(r.resubmitted_at)}</span></p>}
                   </li>
                 ))}
@@ -170,7 +170,7 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
       <Modal open={mode === "approve" || mode === "revise"} onClose={close} title={mode === "approve" ? "Setujui pengajuan" : "Minta revisi"}
         footer={<><button className="btn-ghost" onClick={close} disabled={busy}>Batal</button>{mode === "approve" ? <button className="btn-success" onClick={() => review("approve")} disabled={busy}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}Setujui</button> : <button className="btn-danger" onClick={() => review("revise")} disabled={busy || note.trim().length < 5}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}Kirim Permintaan Revisi</button>}</>}>
         <p className="mb-3 text-sm text-slate-600">{mode === "approve" ? "Pengajuan akan berstatus “Disetujui” dan siap di-pooling." : "Admin SPBU akan melihat catatan ini di dashboard dan diminta mengunggah dokumen perbaikan."}</p>
-        <label className="label" htmlFor="nt">{mode === "approve" ? "Catatan (opsional)" : "Catatan revisi *"}</label>
+        <label className="label" htmlFor="nt">{mode === "approve" ? "Catatan (opsional)" : <>Catatan revisi <span className="text-prtred">*</span></>}</label>
         <textarea id="nt" className="input min-h-[110px]" value={note} onChange={(e) => setNote(e.target.value)} placeholder={mode === "revise" ? "Jelaskan bagian yang perlu diperbaiki…" : ""} />
       </Modal>
 
@@ -179,8 +179,8 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
         {pending && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm"><b className="text-prtred">Catatan PIC Region:</b> {pending.requested_note}</div>}
         <p className="mb-3 text-xs text-slate-500">Unggah hanya dokumen yang diperbaiki. Dokumen lain tetap memakai versi terakhir. Dokumen lama tetap tersimpan dalam riwayat.</p>
         <div className="space-y-3">
-          <FileField kind="excel" required={false} label="Excel Daftar Arsip (perbaikan)" accept=".xlsx" files={ex} onChange={setEx} />
-          <FileField kind="pdf" required={false} label="PDF Form FUPA (perbaikan)" accept=".pdf" files={fu} onChange={setFu} />
+          <FileField kind="excel" required={false} label="Excel Daftar Arsip Usul Musnah (perbaikan)" accept=".xlsx" files={ex} onChange={setEx} />
+          <FileField kind="pdf" required={false} label="PDF Arsip Usul Musnah (perbaikan)" accept=".pdf" files={fu} onChange={setFu} />
           <FileField kind="image" required={false} label="Foto kondisi arsip (mengganti set foto sebelumnya)" accept=".jpg,.jpeg,.png" multiple files={ph} onChange={setPh} />
           <div><label className="label" htmlFor="rn">Catatan perbaikan</label><textarea id="rn" className="input min-h-[70px]" value={note} onChange={(e) => setNote(e.target.value)} /></div>
         </div>

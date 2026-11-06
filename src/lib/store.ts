@@ -93,21 +93,22 @@ export class SheetsStore implements Store {
     this.sheetsApi = getGoogleClients().sheets;
   }
 
-  /** Membuat tab + header untuk seluruh tabel yang belum ada. */
+  /** Membuat tab + menyinkronkan baris header seluruh tabel di Google Sheets. */
   async ensureSchema() {
     const meta = await this.sheetsApi.spreadsheets.get({ spreadsheetId: this.id });
     const existing = new Set<string>(meta.data.sheets.map((s: any) => s.properties.title));
     const requests = TABLES.filter((t) => !existing.has(t)).map((t) => ({ addSheet: { properties: { title: t } } }));
     if (requests.length) await this.sheetsApi.spreadsheets.batchUpdate({ spreadsheetId: this.id, requestBody: { requests } });
-    for (const t of TABLES) {
-      if (existing.has(t)) continue;
-      await this.sheetsApi.spreadsheets.values.update({
-        spreadsheetId: this.id,
-        range: `${t}!A1`,
+    await this.sheetsApi.spreadsheets.values.batchUpdate({
+      spreadsheetId: this.id,
+      requestBody: {
         valueInputOption: "RAW",
-        requestBody: { values: [[...SCHEMA[t]]] },
-      });
-    }
+        data: TABLES.map((t) => ({
+          range: `${t}!A1`,
+          values: [[...SCHEMA[t]]],
+        })),
+      },
+    });
   }
 
   private parseSheetValues(t: TableName, values: any[][] | undefined): Row[] {

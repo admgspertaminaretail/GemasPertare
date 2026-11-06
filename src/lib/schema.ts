@@ -7,6 +7,7 @@ export const SCHEMA = {
   USERS: [
     "user_id", "username", "full_name", "email", "password_hash", "role_id",
     "region_id", "spbu_id", "is_active", "is_demo", "created_at", "last_login",
+    "profile_name", "employee_id", "phone",
   ],
   REGIONS: ["region_id", "region_name", "is_active"],
   SPBUS: [
@@ -65,6 +66,10 @@ export const SCHEMA = {
     "extract_id", "period", "title", "target_scope", "region_id", "spbu_id",
     "description", "status", "file_name", "mime", "size", "storage_ref",
     "total_rows", "meta", "uploaded_by", "uploaded_by_name", "uploaded_at", "is_demo",
+  ],
+  HOME_SLIDES: [
+    "slide_id", "title", "badge", "description", "cta_label", "cta_href",
+    "image_ref", "file_name", "mime", "sort_order", "status", "updated_by", "updated_at", "is_demo",
   ],
 } as const;
 

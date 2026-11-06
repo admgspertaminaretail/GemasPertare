@@ -14,7 +14,10 @@ const fileOf = (fd: FormData, k: string) => { const f = fd.get(k); return f && t
 export async function listTemplates(u: SessionUser) {
   const store = await getStore();
   const rows = await store.list("TEMPLATES");
-  return rows.filter((t) => u.role === "ADMIN_PAM" || t.status === "Aktif").sort((a, b) => a.template_id.localeCompare(b.template_id));
+  return rows
+    .filter((t) => u.role === "ADMIN_PAM" || t.status === "Aktif")
+    .filter((t) => (u.role === "ADMIN_SPBU" ? t.category === "Daftar Arsip" : true))
+    .sort((a, b) => a.template_id.localeCompare(b.template_id));
 }
 
 export async function saveTemplate(u: SessionUser, fd: FormData, editId?: string) {
@@ -56,6 +59,21 @@ export async function setTemplateActive(u: SessionUser, id: string, active: bool
 export async function listKnowledge(u: SessionUser) {
   const store = await getStore();
   const rows = await store.list("KNOWLEDGE_DOCUMENTS");
+  for (const r of rows) {
+    if (r.category === "Materi Sprint") {
+      const patch: Partial<Row> = { category: "Sprint (Surat Perintah)" };
+      if (r.title === "Materi Sprint Tim Arsip") {
+        patch.title = "Sprint (Surat Perintah) Pengelolaan Arsip";
+        patch.description = "Surat perintah resmi terkait pengelolaan dan pemusnahan arsip.";
+      }
+      try {
+        await store.update("KNOWLEDGE_DOCUMENTS", r.doc_id, patch);
+        Object.assign(r, patch);
+      } catch {
+        Object.assign(r, patch);
+      }
+    }
+  }
   return rows.sort((a, b) => a.doc_id.localeCompare(b.doc_id)).map((r) => (u.role === "ADMIN_PAM" ? r : { ...r, ai_status: "" }));
 }
 

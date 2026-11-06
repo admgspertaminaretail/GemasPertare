@@ -11,7 +11,7 @@ export default async function InfoPage() {
   const docs = await listKnowledge(u);
   return (
     <>
-      <PageHeader icon={<BookOpen className="h-6 w-6" />} title="Pusat Informasi Arsip" subtitle="Perpustakaan digital pedoman pengelolaan arsip: pedoman, TKI, JRDP, buku saku, materi sprint, dan manual i-BOS." />
+      <PageHeader icon={<BookOpen className="h-6 w-6" />} title="Pusat Informasi Arsip" subtitle="Infografis pemusnahan arsip & perpustakaan digital (Pedoman, TKI, JRDP, Buku Saku, Sprint (Surat Perintah), dan Manual i-BOS) — bisa langsung dibaca lewat Preview." />
       <InfoView docs={docs} canManage={u.role === "ADMIN_PAM"} />
     </>
   );

@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Ban, CalendarCheck, ChevronDown, ChevronUp, Download, FileSpreadsheet, FileText, Layers, Loader2, Send } from "lucide-react";
+import { Ban, Calendar, CalendarCheck, ChevronDown, ChevronUp, Download, FileSpreadsheet, Layers, Loader2, Send } from "lucide-react";
+import type { IbosExtractItem } from "@/lib/services/ibos";
 import { SubmissionTable } from "./SubmissionTable";
+import { MonthlyIbosModal } from "./MonthlyIbosModal";
 import { DataTable } from "../ui/DataTable";
 import { Empty, StatusBadge } from "../ui/kit";
 import { ConfirmModal, Modal } from "../ui/Modal";
@@ -23,8 +25,8 @@ export function SubmissionsHub({
   memos,
   poolable,
   memoable,
+  ibosItems = [],
   daftarArsipTemplate,
-  fupaTemplate,
 }: {
   role: string;
   tab: string;
@@ -33,10 +35,11 @@ export function SubmissionsHub({
   memos: R[];
   poolable: R[];
   memoable: R[];
+  ibosItems?: IbosExtractItem[];
   daftarArsipTemplate?: TemplateShortcut;
-  fupaTemplate?: TemplateShortcut;
 }) {
   const [tab, setTab] = useState(initial);
+  const [openIbos, setOpenIbos] = useState(false);
   useEffect(() => { setTab(initial); }, [initial]);
   const isRegion = role === "ADMIN_REGION";
   const tabs = role === "ADMIN_SPBU" ? [] : [
@@ -59,51 +62,47 @@ export function SubmissionsHub({
 
       {tab === "pengajuan" && (
         <>
-          {(daftarArsipTemplate || fupaTemplate) && (
-            <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-prtgreen p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-prtgreen ring-1 ring-emerald-200">
-                  <FileSpreadsheet className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-navy">Shortcut Dokumen Usul Musnah Arsip</div>
-                  <p className="text-xs text-slate-500">
-                    Unduh <b>Template Daftar Arsip Usul Musnah</b> untuk diisi berdasarkan <b>Data Arsip Tarikan i-BOS</b> bulanan.
-                  </p>
-                </div>
+          <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-prtgreen p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-prtgreen ring-1 ring-emerald-200">
+                <FileSpreadsheet className="h-5 w-5" />
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {daftarArsipTemplate && (
-                  <a
-                    href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
-                    className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
-                  >
-                    <Download className="h-4 w-4" />
-                    Unduh {daftarArsipTemplate.name} (.xlsx)
-                  </a>
-                )}
-                {fupaTemplate && (
-                  <a
-                    href={`/api/files/template/${fupaTemplate.id}?download=1`}
-                    className="btn-ghost btn-sm ring-1 ring-slate-200"
-                  >
-                    <FileText className="h-4 w-4 text-prtred" />
-                    Unduh Form FUPA
-                  </a>
-                )}
-                <Link href="/tarikan-ibos" className="btn-ghost btn-sm text-brand ring-1 ring-blue-100 bg-softblue/60 hover:bg-softblue">
-                  Data Arsip Tarikan i-BOS
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+              <div>
+                <div className="text-sm font-bold text-navy">Shortcut Data Arsip Per Bulan &amp; Daftar Arsip</div>
+                <p className="text-xs text-slate-500">
+                  Unduh <b>Data Arsip Per Bulan</b> dari Admin GS lalu susun ke dalam <b>Template Daftar Arsip Usul Musnah</b>.
+                </p>
               </div>
             </div>
-          )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setOpenIbos(true)}
+                className="btn-primary btn-sm"
+              >
+                <Calendar className="h-4 w-4" />
+                Data Arsip Per Bulan ({ibosItems.length})
+              </button>
+              {daftarArsipTemplate && (
+                <a
+                  href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
+                  className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                >
+                  <Download className="h-4 w-4" />
+                  Template Daftar Arsip (.xlsx)
+                </a>
+              )}
+            </div>
+          </div>
+
           <SubmissionTable
             rows={subs}
             showSpbu={role !== "ADMIN_SPBU"}
             showRegion={role === "ADMIN_PAM"}
             emptyText={role === "ADMIN_SPBU" ? "Klik “Buat Pengajuan Usul Musnah” untuk memulai." : undefined}
           />
+
+          <MonthlyIbosModal open={openIbos} onClose={() => setOpenIbos(false)} items={ibosItems} />
         </>
       )}
       {tab === "pooling" && <PoolingTab canEdit={isRegion} poolings={poolings} poolable={poolable} />}
@@ -170,8 +169,8 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
             </div>
           )}
           <div className="grid gap-3 border-t border-slate-100 bg-cloud/60 p-4 md:grid-cols-[1fr_180px_1fr_auto] md:items-end">
-            <div><label className="label" htmlFor="fn">Nomor FUPA Regional *</label><input id="fn" className="input" placeholder="mis. FUPA/R1/001/2026" value={fupa} onChange={(e) => setFupa(e.target.value)} /></div>
-            <div><label className="label" htmlFor="fd">Tanggal pooling *</label><input id="fd" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+            <div><label className="label" htmlFor="fn">Nomor FUPA Regional <span className="text-prtred">*</span></label><input id="fn" className="input" placeholder="mis. FUPA/R1/001/2026" value={fupa} onChange={(e) => setFupa(e.target.value)} /></div>
+            <div><label className="label" htmlFor="fd">Tanggal pooling <span className="text-prtred">*</span></label><input id="fd" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div><label className="label" htmlFor="fnt">Catatan</label><input id="fnt" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             <button className="btn-primary" disabled={!sel.length || !fupa.trim() || !date} onClick={() => setConfirm(true)}><Layers className="h-4 w-4" />Buat Pooling ({sel.length})</button>
           </div>
@@ -215,7 +214,7 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
         message={`${sel.length} pengajuan dari ${spbuSel} SPBU akan digabung ke nomor FUPA “${fupa}”. Status berubah menjadi “Sudah Masuk Pooling”.`} />
       <ConfirmModal open={!!cancel} onClose={() => setCancel(null)} busy={busy} onConfirm={doCancel} danger confirmLabel="Batalkan Pooling" title={`Batalkan pooling ${cancel?.fupa_number}?`}>
         <p className="mb-3 text-sm text-slate-600">Seluruh pengajuan anggota akan kembali berstatus <b>Disetujui</b>. Pembatalan tercatat dalam riwayat.</p>
-        <label className="label" htmlFor="cr">Alasan pembatalan *</label>
+        <label className="label" htmlFor="cr">Alasan pembatalan <span className="text-prtred">*</span></label>
         <textarea id="cr" className="input min-h-[80px]" value={reason} onChange={(e) => setReason(e.target.value)} />
       </ConfirmModal>
     </div>
@@ -254,7 +253,7 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
           <div className="border-b border-slate-100 p-4"><h2 className="font-bold text-navy">Catat MEMO Regional</h2><p className="text-xs text-slate-500">Persetujuan Manager/VP dan pembuatan MEMO dilakukan di luar GEMAS. Di sini hanya mencatat nomor dan tanggal MEMO.</p></div>
           <div className="space-y-4 p-4">
             <div>
-              <div className="label">FUPA Regional yang tercakup *</div>
+              <div className="label">FUPA Regional yang tercakup <span className="text-prtred">*</span></div>
               {memoable.length === 0 ? <p className="rounded-xl bg-cloud p-3 text-sm text-slate-500">Belum ada pooling FUPA yang belum ber-MEMO. Buat pooling terlebih dahulu di tab Pooling FUPA.</p> : (
                 <div className="grid gap-2 sm:grid-cols-2">
                   {memoable.map((p) => (
@@ -267,8 +266,8 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
               )}
             </div>
             <div className="grid gap-3 md:grid-cols-[1fr_180px_1fr_auto] md:items-end">
-              <div><label className="label" htmlFor="mn">Nomor MEMO *</label><input id="mn" className="input" value={num} onChange={(e) => setNum(e.target.value)} /></div>
-              <div><label className="label" htmlFor="md">Tanggal MEMO *</label><input id="md" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+              <div><label className="label" htmlFor="mn">Nomor MEMO <span className="text-prtred">*</span></label><input id="mn" className="input" value={num} onChange={(e) => setNum(e.target.value)} /></div>
+              <div><label className="label" htmlFor="md">Tanggal MEMO <span className="text-prtred">*</span></label><input id="md" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
               <div><label className="label" htmlFor="mt">Keterangan</label><input id="mt" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
               <button className="btn-primary" disabled={!sel.length || !num.trim() || !date} onClick={() => setConfirm(true)}><Send className="h-4 w-4" />Catat MEMO</button>
             </div>
@@ -296,7 +295,7 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
         <p className="mb-3 rounded-xl bg-softblue/70 p-3 text-xs text-navy">Informasi monitoring tambahan. GEMAS tidak melakukan review substantif atau persetujuan oleh PAM.</p>
         <div className="space-y-3">
           <div><label className="label">Status penerusan</label><select className="input" value={fs.status} onChange={(e) => setFs({ ...fs, status: e.target.value })}><option>{FORWARD.NO}</option><option>{FORWARD.YES}</option></select></div>
-          {fs.status === FORWARD.YES && <div><label className="label">Tanggal penerusan *</label><input type="date" max={todayStr()} className="input" value={fs.date} onChange={(e) => setFs({ ...fs, date: e.target.value })} /></div>}
+          {fs.status === FORWARD.YES && <div><label className="label">Tanggal penerusan <span className="text-prtred">*</span></label><input type="date" max={todayStr()} className="input" value={fs.date} onChange={(e) => setFs({ ...fs, date: e.target.value })} /></div>}
           <div><label className="label">Keterangan (opsional)</label><textarea className="input min-h-[70px]" value={fs.notes} onChange={(e) => setFs({ ...fs, notes: e.target.value })} /></div>
         </div>
       </Modal>
