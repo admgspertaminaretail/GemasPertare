@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Download, Eye, FileSpreadsheet, FileText, History, Image as Img, Layers, Loader2, RotateCcw, Send, Upload, XCircle } from "lucide-react";
 import { StatusBadge, DemoTag } from "../ui/kit";
-import { ConfirmModal, Modal } from "../ui/Modal";
+import { Modal } from "../ui/Modal";
 import { FileField } from "../ui/FileField";
 import { FilePreview, PreviewTarget } from "../ui/FilePreview";
 import { useToast } from "../ui/Toast";
@@ -13,7 +13,10 @@ import { fmtDate, fmtDateTime, fmtSize } from "@/lib/format";
 import { DOC_TYPE, FORWARD, STATUS } from "@/lib/constants";
 
 type R = Record<string, any>;
-const DOC_LABEL: Record<string, string> = { [DOC_TYPE.EXCEL]: "Excel Daftar Arsip Usul Musnah", [DOC_TYPE.FUPA]: "PDF Form FUPA (ditandatangani ABH)" };
+const DOC_LABEL: Record<string, string> = {
+  [DOC_TYPE.EXCEL]: "Excel Daftar Arsip Usul Musnah",
+  [DOC_TYPE.FUPA]: "PDF Form FUPA (ditandatangani ABH)",
+};
 
 export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: R; documents: R[]; photos: R[]; revisions: R[]; history: R[]; forwarding: R | null }; role: string }) {
   const router = useRouter();
@@ -42,22 +45,31 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
   };
   const resubmit = async () => {
     const fd = new FormData(); fd.set("note", note);
-    if (ex[0]) fd.set("excel", ex[0]); if (fu[0]) fd.set("fupa", fu[0]); ph.forEach((p) => fd.append("photos", p));
+    if (ex[0]) fd.set("excel", ex[0]);
+    if (fu[0]) fd.set("fupa", fu[0]);
+    ph.forEach((p) => fd.append("photos", p));
     setBusy(true);
     try { await api(`/api/submissions/${s.submission_id}/resubmit`, fd); toast("success", "Dokumen revisi diunggah dan masuk antrean review."); close(); router.refresh(); }
     catch (e: any) { toast("error", e.message); } finally { setBusy(false); }
   };
 
   const DocRow = ({ d, old }: { d: R; old?: boolean }) => {
-    const Icon = d.doc_type === DOC_TYPE.EXCEL ? FileSpreadsheet : FileText;
+    const isExcel = d.doc_type === DOC_TYPE.EXCEL;
+    const Icon = isExcel ? FileSpreadsheet : FileText;
+    let rowCount = 0;
+    try { const m = d.meta ? JSON.parse(d.meta) : {}; rowCount = Number(m.totalRows ?? m.rows ?? 0) || 0; } catch {}
     return (
       <li className={`flex flex-wrap items-center gap-3 rounded-xl p-3 ring-1 ${old ? "bg-slate-50 ring-slate-100" : "bg-white ring-slate-200"}`}>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${d.doc_type === DOC_TYPE.EXCEL ? "bg-prtgreen" : "bg-prtred"} text-white`}><Icon className="h-5 w-5" /></div>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${isExcel ? "bg-prtgreen" : "bg-prtred"} text-white`}><Icon className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-navy">{DOC_LABEL[d.doc_type]} <span className="ml-1 rounded bg-softblue px-1.5 py-0.5 text-[10px] font-bold text-brand">{d.revision_id}</span></div>
+          <div className="text-sm font-bold text-navy">
+            {DOC_LABEL[d.doc_type] || d.doc_type}
+            <span className="ml-1.5 rounded bg-softblue px-1.5 py-0.5 text-[10px] font-bold text-brand">{d.revision_id}</span>
+            {rowCount > 0 && <span className="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">{rowCount} baris</span>}
+          </div>
           <div className="truncate text-xs text-slate-500">{d.file_name} · {fmtSize(d.size)} · {fmtDateTime(d.uploaded_at)}</div>
         </div>
-        <button className="btn-ghost btn-sm" onClick={() => setPreview({ kind: "doc", id: d.doc_id, name: d.file_name, mime: d.mime })}><Eye className="h-4 w-4" />{d.doc_type === DOC_TYPE.EXCEL ? "Lihat" : "Buka"}</button>
+        <button className="btn-ghost btn-sm" onClick={() => setPreview({ kind: "doc", id: d.doc_id, name: d.file_name, mime: d.mime })}><Eye className="h-4 w-4" />{isExcel ? "Lihat Tabel" : "Buka"}</button>
         <a className="btn-ghost btn-sm" href={`/api/files/doc/${d.doc_id}?download=1`}><Download className="h-4 w-4" />Unduh</a>
       </li>
     );
@@ -77,7 +89,7 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
           </div>
         </div>
         <dl className="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt className="text-xs text-slate-400">SPBU</dt><dd className="font-semibold"><Link className="text-brand hover:underline" href={role === "ADMIN_SPBU" ? `/dashboard/spbu/${spbu.spbu_id}` : `/dashboard/spbu/${spbu.spbu_id}`}>{s.spbu_name}</Link></dd></div>
+          <div><dt className="text-xs text-slate-400">SPBU</dt><dd className="font-semibold"><Link className="text-brand hover:underline" href={`/dashboard/spbu/${spbu.spbu_id}`}>{s.spbu_name}</Link></dd></div>
           <div><dt className="text-xs text-slate-400">Kode SPBU · Region</dt><dd className="font-semibold">{s.spbu_code} · {s.region_name}</dd></div>
           <div><dt className="text-xs text-slate-400">Tanggal pengajuan</dt><dd className="font-semibold">{fmtDate(s.submission_date)}</dd></div>
           <div><dt className="text-xs text-slate-400">Diunggah</dt><dd className="font-semibold">{fmtDateTime(s.created_at)}</dd></div>
@@ -126,7 +138,7 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
                 {revisions.map((r) => (
                   <li key={r.revision_id} className="rounded-xl bg-cloud p-4">
                     <div className="flex flex-wrap items-center gap-2"><span className="chip bg-red-50 text-prtred ring-red-200">{r.revision_id}</span>{r.resubmitted_at ? <span className="chip bg-emerald-50 text-emerald-700 ring-emerald-200">Sudah diperbaiki</span> : <span className="chip bg-amber-50 text-amber-800 ring-amber-200">Menunggu perbaikan</span>}</div>
-                    <p className="mt-2 text-sm"><b>Catatan PIC Region:</b> {r.requested_note}</p><p className="text-xs text-slate-500">{r.requested_by_name} · {fmtDateTime(r.requested_at)}</p>
+                    <p className="mt-2 text-sm"><b>Catatan PIC Region:</b> {r.requested_note}</p><p className="text-xs text-slate-500">{r.requested_by_name} · {fmtDateTime(pending?.revision_id === r.revision_id ? r.requested_at : r.requested_at)}</p>
                     {r.resubmitted_at && <p className="mt-2 text-sm"><b>Perbaikan SPBU:</b> {r.resubmit_note || "Dokumen revisi diunggah."} <span className="text-xs text-slate-500">· {fmtDateTime(r.resubmitted_at)}</span></p>}
                   </li>
                 ))}

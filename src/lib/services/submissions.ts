@@ -92,7 +92,9 @@ export async function getSubmissionDetail(u: SessionUser, id: string) {
   return {
     submission: sub,
     spbu: spbu.find((s) => s.spbu_id === raw.spbu_id)!,
-    documents: docs.filter((d) => d.submission_id === id).sort((a, b) => a.uploaded_at.localeCompare(b.uploaded_at)),
+    documents: docs
+      .filter((d) => d.submission_id === id && (d.doc_type === DOC_TYPE.EXCEL || d.doc_type === DOC_TYPE.FUPA))
+      .sort((a, b) => a.uploaded_at.localeCompare(b.uploaded_at)),
     photos: photos.filter((d) => d.submission_id === id).sort((a, b) => a.uploaded_at.localeCompare(b.uploaded_at)),
     revisions: revs.filter((r) => r.submission_id === id).sort((a, b) => Number(a.revision_no) - Number(b.revision_no)),
     history: hist.filter((h) => h.submission_id === id).sort((a, b) => a.changed_at.localeCompare(b.changed_at)),
@@ -100,21 +102,92 @@ export async function getSubmissionDetail(u: SessionUser, id: string) {
   };
 }
 
-async function validateExcel(f: ValidatedFile) {
+function cellStr(v: any): string {
+  if (v === null || v === undefined) return "";
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "object") {
+    if (Array.isArray(v.richText)) return v.richText.map((rt: any) => rt?.text ?? "").join("").trim();
+    const inner = v.text ?? v.result ?? "";
+    if (inner instanceof Date) return inner.toISOString().slice(0, 10);
+    return String(inner).trim();
+  }
+  return String(v).trim();
+}
+
+export interface ParsedExcelTable {
+  sheet: string;
+  totalRows: number;
+  headers: string[];
+  previewRows: string[][];
+}
+
+export async function parseExcelStructured(f: ValidatedFile, label: string): Promise<ParsedExcelTable> {
   const wb = new ExcelJS.Workbook();
   try {
     await wb.xlsx.load(f.buffer as any);
   } catch {
-    throw new Error("File Excel tidak dapat dibaca. Pastikan file berformat .xlsx yang valid.");
+    throw new Error(`${label}: file Excel tidak dapat dibaca. Pastikan file berformat .xlsx yang valid.`);
   }
   const ws = wb.worksheets[0];
-  if (!ws) throw new Error("File Excel tidak memiliki lembar kerja.");
-  let rows = 0;
-  ws.eachRow((row, n) => {
-    if (n > 1 && row.values && (row.values as any[]).some((v) => v !== null && v !== undefined && String(v).trim() !== "")) rows++;
+  if (!ws) throw new Error(`${label}: file Excel tidak memiliki lembar kerja.`);
+  const nonEmpty: string[][] = [];
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    const vals = ((row.values as any[]) || []).slice(1).map(cellStr);
+    while (vals.length > 0 && vals[vals.length - 1] === "") vals.pop();
+    if (vals.some((c) => c !== "")) nonEmpty.push(vals);
   });
-  if (rows < 1) throw new Error("Daftar Arsip Usul Musnah (Excel) belum berisi data. Isi minimal satu baris arsip.");
-  return rows;
+  if (nonEmpty.length < 2) {
+    throw new Error(`${label} belum berisi data. Isi minimal satu baris data di bawah baris judul kolom.`);
+  }
+  let headerIdx = 0;
+  for (let i = 0; i < Math.min(5, nonEmpty.length - 1); i++) {
+    if (nonEmpty[i].filter((c) => c !== "").length >= 2) {
+      headerIdx = i;
+      break;
+    }
+  }
+  const rawData = nonEmpty.slice(headerIdx + 1);
+  if (rawData.length < 1) {
+    throw new Error(`${label} belum berisi baris data di bawah header.`);
+  }
+  const maxCols = Math.min(
+    16,
+    Math.max(nonEmpty[headerIdx].length, ...rawData.slice(0, 250).map((r) => r.length), 1)
+  );
+  const headers = Array.from({ length: maxCols }, (_, i) => nonEmpty[headerIdx][i] || `Kolom ${i + 1}`);
+  const previewRows = rawData.slice(0, 250).map((r) =>
+    Array.from({ length: maxCols }, (_, i) => (r[i] || "").slice(0, 180))
+  );
+  return {
+    sheet: ws.name || "Data",
+    totalRows: rawData.length,
+    headers,
+    previewRows,
+  };
+}
+
+export function packExcelMeta(parsed: ParsedExcelTable, extra: Record<string, string> = {}): string {
+  const rows = [...parsed.previewRows];
+  let json = JSON.stringify({
+    ...extra,
+    rows: parsed.totalRows,
+    totalRows: parsed.totalRows,
+    sheet: parsed.sheet,
+    headers: parsed.headers,
+    previewRows: rows,
+  });
+  while (json.length > 38000 && rows.length > 10) {
+    rows.splice(Math.floor(rows.length * 0.75));
+    json = JSON.stringify({
+      ...extra,
+      rows: parsed.totalRows,
+      totalRows: parsed.totalRows,
+      sheet: parsed.sheet,
+      headers: parsed.headers,
+      previewRows: rows,
+    });
+  }
+  return json;
 }
 
 function fileList(fd: FormData, key: string): File[] {
@@ -131,6 +204,7 @@ async function saveDoc(
     { doc_id: id, submission_id: sid, revision_id: rev, doc_type: type, file_name: f.name, mime: f.mime, size: String(f.size),
       storage_ref: ref, uploaded_by: u.userId, uploaded_at: nowIso(), is_current: "1", meta },
   ]);
+  return id;
 }
 async function savePhoto(u: SessionUser, sid: string, rev: string, f: ValidatedFile) {
   const store = await getStore();
@@ -155,9 +229,12 @@ export async function createSubmission(u: SessionUser, fd: FormData) {
 
   const errors: string[] = [];
   let excel: ValidatedFile | undefined, fupa: ValidatedFile | undefined;
+  let parsedExcel: ParsedExcelTable | undefined;
   const photos: ValidatedFile[] = [];
-  let excelRows = 0;
-  try { excel = await validateUpload(fileList(fd, "excel")[0], "excel", "Excel Daftar Arsip Usul Musnah"); excelRows = await validateExcel(excel); } catch (e: any) { errors.push(e.message); }
+  try {
+    excel = await validateUpload(fileList(fd, "excel")[0], "excel", "Excel Daftar Arsip Usul Musnah");
+    parsedExcel = await parseExcelStructured(excel, "Daftar Arsip Usul Musnah (Excel)");
+  } catch (e: any) { errors.push(e.message); }
   try { fupa = await validateUpload(fileList(fd, "fupa")[0], "pdf", "PDF Form FUPA (ditandatangani ABH)"); } catch (e: any) { errors.push(e.message); }
   const pf = fileList(fd, "photos");
   if (!pf.length) errors.push("Foto kondisi fisik arsip wajib diunggah (minimal 1).");
@@ -174,7 +251,7 @@ export async function createSubmission(u: SessionUser, fd: FormData) {
     { submission_id: sid, spbu_id: spbu.spbu_id, region_id: spbu.region_id, submission_date: date, description, status: STATUS.UPLOADED,
       current_revision: "0", submitted_by: u.userId, created_at: t, updated_at: t, last_review_note: "", is_demo: "0" },
   ]);
-  await saveDoc(u, sid, sid, DOC_TYPE.EXCEL, excel!, JSON.stringify({ rows: excelRows }));
+  await saveDoc(u, sid, sid, DOC_TYPE.EXCEL, excel!, packExcelMeta(parsedExcel!, { period: date.slice(0, 7) }));
   await saveDoc(u, sid, sid, DOC_TYPE.FUPA, fupa!);
   for (const p of photos) await savePhoto(u, sid, sid, p);
   const store2 = await getStore();
@@ -224,17 +301,17 @@ export async function resubmit(u: SessionUser, sid: string, fd: FormData) {
 
   const errors: string[] = [];
   let excel: ValidatedFile | undefined, fupa: ValidatedFile | undefined;
+  let parsedExcel: ParsedExcelTable | undefined;
   const photos: ValidatedFile[] = [];
-  let excelRows = 0;
   const e0 = fileList(fd, "excel")[0], f0 = fileList(fd, "fupa")[0], pf = fileList(fd, "photos");
-  if (e0) try { excel = await validateUpload(e0, "excel", "Excel"); excelRows = await validateExcel(excel); } catch (e: any) { errors.push(e.message); }
+  if (e0) try { excel = await validateUpload(e0, "excel", "Excel Daftar Arsip"); parsedExcel = await parseExcelStructured(excel, "Excel Daftar Arsip"); } catch (e: any) { errors.push(e.message); }
   if (f0) try { fupa = await validateUpload(f0, "pdf", "PDF FUPA"); } catch (e: any) { errors.push(e.message); }
   for (const p of pf.slice(0, 10)) try { photos.push(await validateUpload(p, "image", `Foto ${p.name}`)); } catch (e: any) { errors.push(e.message); }
   if (!e0 && !f0 && !pf.length) errors.push("Unggah minimal satu dokumen hasil perbaikan.");
   if (errors.length) throw new HttpError(400, errors.join(" "));
 
   const revId = rev.revision_id;
-  if (excel) { await markOld("SUBMISSION_DOCUMENTS", sid, (r) => r.doc_type === DOC_TYPE.EXCEL); await saveDoc(u, sid, revId, DOC_TYPE.EXCEL, excel, JSON.stringify({ rows: excelRows })); }
+  if (excel && parsedExcel) { await markOld("SUBMISSION_DOCUMENTS", sid, (r) => r.doc_type === DOC_TYPE.EXCEL); await saveDoc(u, sid, revId, DOC_TYPE.EXCEL, excel, packExcelMeta(parsedExcel, { period: sub.submission_date.slice(0, 7) })); }
   if (fupa) { await markOld("SUBMISSION_DOCUMENTS", sid, (r) => r.doc_type === DOC_TYPE.FUPA); await saveDoc(u, sid, revId, DOC_TYPE.FUPA, fupa); }
   if (photos.length) { await markOld("SUBMISSION_PHOTOS", sid, () => true); for (const p of photos) await savePhoto(u, sid, revId, p); }
   const note = String(fd.get("note") || "").trim();

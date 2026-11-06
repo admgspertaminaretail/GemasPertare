@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, ClipboardList, BookOpen, FileDown, FilePlus2, Bot, ArrowRight, AlertTriangle, Clock } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookOpen, FileDown, FileSpreadsheet, FilePlus2, Bot, ArrowRight, AlertTriangle, Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getDashboard } from "@/lib/services/monitoring";
 import { SpbuScene } from "@/components/art/SpbuScene";
@@ -13,7 +13,8 @@ const MENUS = [
   { href: "/dashboard", title: "Dashboard Monitoring", desc: "Pantau progres pengajuan, pooling FUPA, dan MEMO.", icon: LayoutDashboard, tone: "bg-brand" },
   { href: "/detail-monitoring", title: "Rincian Data Monitoring", desc: "Lihat tabel lengkap rincian tiap poin KPI dan grafik.", icon: ClipboardList, tone: "bg-navy" },
   { href: "/info", title: "Pusat Informasi Arsip", desc: "Pedoman, TKI, JRDP, buku saku, dan manual i-BOS.", icon: BookOpen, tone: "bg-brand-700" },
-  { href: "/templates", title: "Pusat Template", desc: "Unduh template i-BOS, Form FUPA, dan Daftar Arsip.", icon: FileDown, tone: "bg-prtgreen" },
+  { href: "/tarikan-ibos", title: "Data Arsip Tarikan i-BOS", desc: "Data tarikan arsip i-BOS per bulan dari Admin GS.", icon: FileSpreadsheet, tone: "bg-emerald-600" },
+  { href: "/templates", title: "Pusat Template", desc: "Unduh template Form FUPA dan Daftar Arsip Usul Musnah.", icon: FileDown, tone: "bg-prtgreen" },
   { href: "/submissions", title: "Pengajuan Usul Musnah Arsip", desc: "Ajukan, review, pooling, dan catat MEMO.", icon: FilePlus2, tone: "bg-prtred" },
   { href: "/ask", title: "Tanya si GEMAS", desc: "Asisten AI berbasis dokumen resmi perusahaan.", icon: Bot, tone: "bg-gradient-to-br from-brand to-prtgreen" },
 ];

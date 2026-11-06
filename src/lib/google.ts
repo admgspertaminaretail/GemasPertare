@@ -10,7 +10,7 @@ const CLOUD_CONFIG_FILE = path.join(DATA_DIR, "cloud-config.json");
 
 export const STORAGE_FOLDER_NAME = "GEMAS_Arsip_Storage";
 export const SPREADSHEET_NAME = "GEMAS_Database_Master";
-export const SUBFOLDER_NAMES = ["submissions", "templates", "knowledge"] as const;
+export const SUBFOLDER_NAMES = ["submissions", "templates", "knowledge", "ibos"] as const;
 
 export interface GoogleCredentialsInfo {
   email: string;

@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarCheck, Layers, Loader2, Send, Ban, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, Ban, CalendarCheck, ChevronDown, ChevronUp, Download, FileSpreadsheet, FileText, Layers, Loader2, Send } from "lucide-react";
 import { SubmissionTable } from "./SubmissionTable";
 import { DataTable } from "../ui/DataTable";
 import { Empty, StatusBadge } from "../ui/kit";
@@ -13,15 +13,38 @@ import { fmtDate, todayStr } from "@/lib/format";
 import { FORWARD } from "@/lib/constants";
 
 type R = Record<string, any>;
+type TemplateShortcut = { id: string; name: string; version: string } | null;
 
-export function SubmissionsHub({ role, tab: initial, subs, poolings, memos, poolable, memoable }: { role: string; tab: string; subs: R[]; poolings: R[]; memos: R[]; poolable: R[]; memoable: R[] }) {
+export function SubmissionsHub({
+  role,
+  tab: initial,
+  subs,
+  poolings,
+  memos,
+  poolable,
+  memoable,
+  daftarArsipTemplate,
+  fupaTemplate,
+}: {
+  role: string;
+  tab: string;
+  subs: R[];
+  poolings: R[];
+  memos: R[];
+  poolable: R[];
+  memoable: R[];
+  daftarArsipTemplate?: TemplateShortcut;
+  fupaTemplate?: TemplateShortcut;
+}) {
   const [tab, setTab] = useState(initial);
+  useEffect(() => { setTab(initial); }, [initial]);
   const isRegion = role === "ADMIN_REGION";
   const tabs = role === "ADMIN_SPBU" ? [] : [
     { id: "pengajuan", label: "Pengajuan", n: subs.length },
     { id: "pooling", label: "Pooling FUPA", n: poolings.filter((p) => p.status === "AKTIF").length },
     { id: "memo", label: "MEMO", n: memos.length },
   ];
+
   return (
     <div className="space-y-4">
       {tabs.length > 0 && (
@@ -33,7 +56,56 @@ export function SubmissionsHub({ role, tab: initial, subs, poolings, memos, pool
           ))}
         </div>
       )}
-      {tab === "pengajuan" && <SubmissionTable rows={subs} showSpbu={role !== "ADMIN_SPBU"} showRegion={role === "ADMIN_PAM"} emptyText={role === "ADMIN_SPBU" ? "Klik “Buat Pengajuan Usul Musnah” untuk memulai." : undefined} />}
+
+      {tab === "pengajuan" && (
+        <>
+          {(daftarArsipTemplate || fupaTemplate) && (
+            <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-prtgreen p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-prtgreen ring-1 ring-emerald-200">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-navy">Shortcut Dokumen Usul Musnah Arsip</div>
+                  <p className="text-xs text-slate-500">
+                    Unduh <b>Template Daftar Arsip Usul Musnah</b> untuk diisi berdasarkan <b>Data Arsip Tarikan i-BOS</b> bulanan.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {daftarArsipTemplate && (
+                  <a
+                    href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
+                    className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                  >
+                    <Download className="h-4 w-4" />
+                    Unduh {daftarArsipTemplate.name} (.xlsx)
+                  </a>
+                )}
+                {fupaTemplate && (
+                  <a
+                    href={`/api/files/template/${fupaTemplate.id}?download=1`}
+                    className="btn-ghost btn-sm ring-1 ring-slate-200"
+                  >
+                    <FileText className="h-4 w-4 text-prtred" />
+                    Unduh Form FUPA
+                  </a>
+                )}
+                <Link href="/tarikan-ibos" className="btn-ghost btn-sm text-brand ring-1 ring-blue-100 bg-softblue/60 hover:bg-softblue">
+                  Data Arsip Tarikan i-BOS
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          )}
+          <SubmissionTable
+            rows={subs}
+            showSpbu={role !== "ADMIN_SPBU"}
+            showRegion={role === "ADMIN_PAM"}
+            emptyText={role === "ADMIN_SPBU" ? "Klik “Buat Pengajuan Usul Musnah” untuk memulai." : undefined}
+          />
+        </>
+      )}
       {tab === "pooling" && <PoolingTab canEdit={isRegion} poolings={poolings} poolable={poolable} />}
       {tab === "memo" && <MemoTab canEdit={isRegion} memos={memos} memoable={memoable} />}
     </div>

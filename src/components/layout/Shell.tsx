@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, ClipboardList, ListOrdered, BookOpen, FileDown, FilePlus2, Bot, Home, Database, Users, ScrollText, ChevronsLeft, ChevronsRight,
+  LayoutDashboard, ClipboardList, ListOrdered, BookOpen, FileDown, FileSpreadsheet, FilePlus2, Bot, Home, Database, Users, ScrollText, ChevronsLeft, ChevronsRight,
   Menu, LogOut, UserCircle2, X, KeyRound, Loader2, Cloud,
 } from "lucide-react";
 import { GemasLogo, PertaminaLogo } from "../art/Logos";
@@ -21,6 +21,7 @@ const NAV = [
   { href: "/detail-monitoring", label: "Rincian Data Monitoring", icon: ClipboardList },
   { href: "/kronologis-pengajuan", label: "Kronologis ID Pengajuan", icon: ListOrdered },
   { href: "/info", label: "Pusat Informasi Arsip", icon: BookOpen },
+  { href: "/tarikan-ibos", label: "Data Arsip Tarikan i-BOS", icon: FileSpreadsheet },
   { href: "/templates", label: "Pusat Template", icon: FileDown },
   { href: "/submissions", label: "Pengajuan Usul Musnah Arsip", icon: FilePlus2 },
   { href: "/ask", label: "Tanya si GEMAS", icon: Bot },

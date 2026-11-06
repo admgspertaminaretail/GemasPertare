@@ -61,6 +61,11 @@ export const SCHEMA = {
     "file_id", "title", "category", "entity_id", "file_name", "mime_type",
     "size_bytes", "storage_ref", "file_url", "uploaded_by", "timestamp",
   ],
+  IBOS_EXTRACTS: [
+    "extract_id", "period", "title", "target_scope", "region_id", "spbu_id",
+    "description", "status", "file_name", "mime", "size", "storage_ref",
+    "total_rows", "meta", "uploaded_by", "uploaded_by_name", "uploaded_at", "is_demo",
+  ],
 } as const;
 
 export type TableName = keyof typeof SCHEMA;

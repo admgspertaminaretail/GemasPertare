@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { Modal } from "./Modal";
 
-export interface PreviewTarget { kind: "template" | "knowledge" | "doc" | "photo"; id: string; name: string; mime: string }
+export interface PreviewTarget { kind: "template" | "knowledge" | "doc" | "photo" | "ibos"; id: string; name: string; mime: string }
 
 /** Pratinjau PDF (iframe), gambar, atau 20 baris pertama Excel. File selalu dilayani server dengan pengecekan akses. */
 export function FilePreview({ target, onClose }: { target: PreviewTarget | null; onClose: () => void }) {

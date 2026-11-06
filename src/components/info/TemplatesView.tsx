@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Download, Eye, FileSpreadsheet, FileText, Info, Loader2, Pencil, Plus, Power } from "lucide-react";
+import { ArrowRight, Download, Eye, FileSpreadsheet, FileText, Info, Loader2, Pencil, Plus, Power } from "lucide-react";
 import { Empty, DemoTag } from "../ui/kit";
 import { Modal, ConfirmModal } from "../ui/Modal";
 import { FilePreview, PreviewTarget } from "../ui/FilePreview";
@@ -11,9 +12,10 @@ import { fmtDate } from "@/lib/format";
 import { TEMPLATE_CATEGORIES } from "@/lib/constants";
 
 type T = Record<string, string>;
-const blank = { name: "", category: TEMPLATE_CATEGORIES[0], version: "", description: "", usage_info: "" };
+const VISIBLE_CATEGORIES = TEMPLATE_CATEGORIES.filter((c) => c !== "Data i-BOS");
+const blank = { name: "", category: VISIBLE_CATEGORIES[0] || "Form FUPA", version: "", description: "", usage_info: "" };
 
-export function TemplatesView({ rows, canManage }: { rows: T[]; canManage: boolean }) {
+export function TemplatesView({ rows, canManage }: { rows: T[]; canManage: boolean; role?: string }) {
   const router = useRouter();
   const toast = useToast();
   const [cat, setCat] = useState("");
@@ -22,7 +24,9 @@ export function TemplatesView({ rows, canManage }: { rows: T[]; canManage: boole
   const [file, setFile] = useState<File | null>(null);
   const [toggle, setToggle] = useState<T | null>(null);
   const [busy, setBusy] = useState(false);
-  const list = rows.filter((r) => !cat || r.category === cat);
+
+  const visibleRows = rows.filter((r) => r.category !== "Data i-BOS");
+  const list = visibleRows.filter((r) => !cat || r.category === cat);
 
   const run = async (fd: FormData, ok: string, after: () => void) => {
     setBusy(true);
@@ -45,8 +49,26 @@ export function TemplatesView({ rows, canManage }: { rows: T[]; canManage: boole
 
   return (
     <div className="space-y-4">
+      <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-prtgreen p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-prtgreen ring-1 ring-emerald-200">
+            <FileSpreadsheet className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold text-navy">Mencari Data Arsip Tarikan i-BOS Bulanan?</div>
+            <p className="text-xs text-slate-500">
+              Data tarikan arsip per bulan dari sistem i-BOS yang diunggah Admin GS kini tersedia di menu khusus <b>Data Arsip Tarikan i-BOS</b>.
+            </p>
+          </div>
+        </div>
+        <Link href="/tarikan-ibos" className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100">
+          Buka Data Arsip Tarikan i-BOS
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
       <div className="card flex flex-wrap items-center gap-2 p-3">
-        {["", ...TEMPLATE_CATEGORIES.filter((c) => rows.some((r) => r.category === c))].map((c) => (
+        {["", ...VISIBLE_CATEGORIES.filter((c) => visibleRows.some((r) => r.category === c))].map((c) => (
           <button key={c || "all"} onClick={() => setCat(c)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition ${cat === c ? "bg-brand text-white ring-brand" : "bg-white text-navy ring-slate-200 hover:bg-softblue"}`}>{c || "Semua kategori"}</button>
         ))}
         <div className="flex-1" />
@@ -96,7 +118,7 @@ export function TemplatesView({ rows, canManage }: { rows: T[]; canManage: boole
           <div className="space-y-3">
             <div><label className="label">Nama template *</label><input className="input" value={edit.form.name} onChange={(e) => setEdit({ ...edit, form: { ...edit.form, name: e.target.value } })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="label">Kategori</label><select className="input" value={edit.form.category} onChange={(e) => setEdit({ ...edit, form: { ...edit.form, category: e.target.value } })}>{TEMPLATE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></div>
+              <div><label className="label">Kategori</label><select className="input" value={edit.form.category} onChange={(e) => setEdit({ ...edit, form: { ...edit.form, category: e.target.value } })}>{VISIBLE_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select></div>
               <div><label className="label">Versi *</label><input className="input" placeholder="mis. 1.0" value={edit.form.version} onChange={(e) => setEdit({ ...edit, form: { ...edit.form, version: e.target.value } })} /></div>
             </div>
             <div><label className="label">Deskripsi</label><textarea className="input min-h-[60px]" value={edit.form.description} onChange={(e) => setEdit({ ...edit, form: { ...edit.form, description: e.target.value } })} /></div>
