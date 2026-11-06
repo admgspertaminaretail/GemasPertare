@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, BookOpen, FileDown, FilePlus2, Bot, ArrowRight, AlertTriangle, Clock } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookOpen, FileDown, FilePlus2, Bot, ArrowRight, AlertTriangle, Clock } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getDashboard } from "@/lib/services/monitoring";
 import { SpbuScene } from "@/components/art/SpbuScene";
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 const MENUS = [
   { href: "/dashboard", title: "Dashboard Monitoring", desc: "Pantau progres pengajuan, pooling FUPA, dan MEMO.", icon: LayoutDashboard, tone: "bg-brand" },
-  { href: "/info", title: "Pusat Informasi Arsip", desc: "Pedoman, TKI, JRDP, buku saku, dan manual i-BOS.", icon: BookOpen, tone: "bg-navy" },
+  { href: "/detail-monitoring", title: "Rincian Data Monitoring", desc: "Lihat tabel lengkap rincian tiap poin KPI dan grafik.", icon: ClipboardList, tone: "bg-navy" },
+  { href: "/info", title: "Pusat Informasi Arsip", desc: "Pedoman, TKI, JRDP, buku saku, dan manual i-BOS.", icon: BookOpen, tone: "bg-brand-700" },
   { href: "/templates", title: "Pusat Template", desc: "Unduh template i-BOS, Form FUPA, dan Daftar Arsip.", icon: FileDown, tone: "bg-prtgreen" },
   { href: "/submissions", title: "Pengajuan Usul Musnah Arsip", desc: "Ajukan, review, pooling, dan catat MEMO.", icon: FilePlus2, tone: "bg-prtred" },
   { href: "/ask", title: "Tanya si GEMAS", desc: "Asisten AI berbasis dokumen resmi perusahaan.", icon: Bot, tone: "bg-gradient-to-br from-brand to-prtgreen" },
@@ -22,11 +23,11 @@ export default async function HomePage() {
   const d = await getDashboard(u);
   const k = d.kpi;
   const summary = [
-    { label: "Menunggu review", v: k.review, s: STATUS.REVIEW },
-    { label: "Perlu revisi", v: k.revision, s: STATUS.REVISION },
-    { label: "Disetujui", v: k.approved, s: STATUS.APPROVED },
-    { label: "Sudah pooling", v: k.pooled, s: STATUS.POOLED },
-    { label: "Sudah di-Memo", v: k.memoed, s: STATUS.MEMOED },
+    { label: "Menunggu review", v: k.review, s: STATUS.REVIEW, view: "review" },
+    { label: "Perlu revisi", v: k.revision, s: STATUS.REVISION, view: "revision" },
+    { label: "Disetujui", v: k.approved, s: STATUS.APPROVED, view: "approved" },
+    { label: "Sudah pooling", v: k.pooled, s: STATUS.POOLED, view: "pooled" },
+    { label: "Sudah di-Memo", v: k.memoed, s: STATUS.MEMOED, view: "memoed" },
   ];
   const alert =
     u.role === "ADMIN_SPBU" && k.revision > 0 ? { text: `${k.revision} pengajuan Anda perlu revisi.`, href: "/submissions", icon: AlertTriangle, cls: "bg-red-50 text-prtred ring-red-100" }
@@ -65,12 +66,15 @@ export default async function HomePage() {
       <section>
         <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">Ringkasan status pengajuan {u.role === "ADMIN_SPBU" ? "SPBU Anda" : u.role === "ADMIN_REGION" ? "Region Anda" : "seluruh Region"}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <div className="card p-4"><div className="text-2xl font-extrabold text-navy">{k.total}</div><div className="text-xs text-slate-500">Total pengajuan</div></div>
+          <Link href="/detail-monitoring?view=total" className="card p-4 transition hover:-translate-y-0.5 hover:shadow-pop">
+            <div className="text-2xl font-extrabold text-navy">{k.total}</div>
+            <div className="text-xs text-slate-500">Total pengajuan</div>
+          </Link>
           {summary.map((s) => (
-            <div key={s.label} className="card p-4">
+            <Link key={s.label} href={`/detail-monitoring?view=${s.view}`} className="card p-4 transition hover:-translate-y-0.5 hover:shadow-pop">
               <div className="text-2xl font-extrabold text-navy">{s.v}</div>
               <span className={`chip mt-1 ${STATUS_STYLE[s.s]}`}>{s.label}</span>
-            </div>
+            </Link>
           ))}
         </div>
       </section>

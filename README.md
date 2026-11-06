@@ -16,8 +16,8 @@ Akun demo (kata sandi `gemas123`, tampil di halaman login selama `DEMO_MODE=true
 
 > **Produksi:** set `DEMO_MODE=false`, ganti `AUTH_SECRET`, dan nonaktifkan/hapus seluruh akun demo dari menu Pengguna.
 
-## Logo resmi
-Letakkan logo resmi Pertamina Retail (tanpa diubah) di `public/brand/logo-pertamina-retail.png`. Logo muncul otomatis di header. Aplikasi tidak membuat ulang logo.
+## Logo
+PNG transparan di `public/brand/`: `logo-pertamina-retail.png` (logo korporat, header & halaman login), `logo-gemas.png` (logo aplikasi GEMAS, sidebar & login), `logo-gemas-icon.png` (lambang saja, sidebar ringkas & favicon). Ganti file dengan nama yang sama untuk memperbarui logo.
 
 ## Arsitektur
 | Lapisan | Implementasi |

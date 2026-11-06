@@ -31,6 +31,11 @@ export async function GET(req: Request, { params }: { params: { kind: string; id
       if (!f || !f.storage_ref) throw new HttpError(404, "File belum tersedia.");
       if (u.role !== "ADMIN_PAM" && params.kind === "template" && f.status !== "Aktif") throw new HttpError(404, "Template tidak aktif.");
       ({ storage_ref: ref, file_name: name, mime } = f);
+    } else if (params.kind === "index") {
+      if (u.role !== "ADMIN_PAM") throw new HttpError(403, "Hanya Admin PAM yang dapat mengakses indeks berkas.");
+      const f = (await store.list("FILE_INDEX")).find((r) => r.file_id === params.id);
+      if (!f || !f.storage_ref) throw new HttpError(404, "File tidak ditemukan.");
+      ref = f.storage_ref; name = f.file_name; mime = f.mime_type;
     } else throw new HttpError(404, "Jenis file tidak dikenal.");
 
     const buf = await readFile(ref);

@@ -2,7 +2,7 @@
 import { ReactNode, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 
-export function Modal({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; wide?: boolean }) {
+export function Modal({ open, onClose, title, children, footer, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; wide?: boolean | "xl" }) {
   useEffect(() => {
     if (!open) return;
     const h = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -11,9 +11,10 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
     return () => { window.removeEventListener("keydown", h); document.body.style.overflow = ""; };
   }, [open, onClose]);
   if (!open) return null;
+  const maxW = wide === "xl" ? "sm:max-w-5xl" : wide ? "sm:max-w-3xl" : "sm:max-w-lg";
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-navy/50 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className={`flex max-h-[92vh] w-full animate-slidein flex-col rounded-t-2xl bg-white shadow-pop sm:rounded-2xl ${wide ? "sm:max-w-3xl" : "sm:max-w-lg"}`}>
+      <div role="dialog" aria-modal="true" aria-label={title} className={`flex max-h-[92vh] w-full animate-slidein flex-col rounded-t-2xl bg-white shadow-pop sm:rounded-2xl ${maxW}`}>
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 className="text-base font-bold text-navy">{title}</h2>
           <button onClick={onClose} aria-label="Tutup" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>

@@ -4,10 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, BookOpen, FileDown, FilePlus2, Bot, Home, Database, Users, ScrollText, ChevronsLeft, ChevronsRight,
-  Menu, LogOut, UserCircle2, X, KeyRound, Loader2,
+  LayoutDashboard, ClipboardList, ListOrdered, BookOpen, FileDown, FilePlus2, Bot, Home, Database, Users, ScrollText, ChevronsLeft, ChevronsRight,
+  Menu, LogOut, UserCircle2, X, KeyRound, Loader2, Cloud,
 } from "lucide-react";
-import { GemasMark } from "../art/Mascot";
+import { GemasLogo, PertaminaLogo } from "../art/Logos";
 import { DemoTag } from "../ui/kit";
 import { Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
@@ -18,6 +18,8 @@ export interface ShellUser { name: string; username: string; role: string; roleL
 const NAV = [
   { href: "/home", label: "Beranda", icon: Home },
   { href: "/dashboard", label: "Dashboard Monitoring", icon: LayoutDashboard },
+  { href: "/detail-monitoring", label: "Rincian Data Monitoring", icon: ClipboardList },
+  { href: "/kronologis-pengajuan", label: "Kronologis ID Pengajuan", icon: ListOrdered },
   { href: "/info", label: "Pusat Informasi Arsip", icon: BookOpen },
   { href: "/templates", label: "Pusat Template", icon: FileDown },
   { href: "/submissions", label: "Pengajuan Usul Musnah Arsip", icon: FilePlus2 },
@@ -26,15 +28,13 @@ const NAV = [
 const ADMIN = [
   { href: "/admin/master", label: "Master Data", icon: Database, roles: ["ADMIN_PAM"] },
   { href: "/admin/users", label: "Pengguna", icon: Users, roles: ["ADMIN_PAM"] },
+  { href: "/admin/database", label: "Database & Cloud", icon: Cloud, roles: ["ADMIN_PAM"] },
   { href: "/admin/activity", label: "Audit Trail", icon: ScrollText, roles: ["ADMIN_PAM", "ADMIN_REGION"] },
 ];
 
 function BrandLogo() {
-  const [ok, setOk] = useState(true);
-  // Logo resmi disediakan perusahaan: letakkan di public/brand/logo-pertamina-retail.png (tidak dimodifikasi).
-  if (!ok) return <span className="hidden rounded-md border border-dashed border-slate-300 px-2 py-1 text-[10px] font-semibold text-slate-400 md:inline" title="Letakkan logo resmi di public/brand/logo-pertamina-retail.png">Logo Pertamina Retail</span>;
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/brand/logo-pertamina-retail.png" alt="Pertamina Retail" className="hidden h-8 w-auto md:block" onError={() => setOk(false)} />;
+  // Logo korporat: public/brand/logo-pertamina-retail.png (PNG transparan)
+  return <PertaminaLogo className="hidden h-9 md:block" />;
 }
 
 export function Shell({ user, children }: { user: ShellUser; children: ReactNode }) {
@@ -88,8 +88,9 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
       {/* sidebar desktop */}
       <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-gradient-to-b from-navy to-brand-700 transition-all duration-200 lg:flex ${collapsed ? "w-[76px]" : "w-72"}`}>
         <div className={`flex h-16 items-center border-b border-white/10 px-4 ${collapsed ? "justify-center" : "gap-3"}`}>
-          <GemasMark size={36} />
-          {!collapsed && <div className="leading-tight"><div className="text-lg font-extrabold tracking-wide text-white">GEMAS</div><div className="text-[10px] text-white/60">Archive Monitoring</div></div>}
+          {collapsed
+            ? <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white p-1.5 shadow-card"><GemasLogo variant="icon" className="h-full" /></div>
+            : <div className="flex h-12 items-center rounded-xl bg-white px-3 py-1.5 shadow-card"><GemasLogo className="h-full" /></div>}
         </div>
         <SidebarBody compact={collapsed} />
         <button onClick={toggle} className="m-3 flex items-center justify-center gap-2 rounded-xl bg-white/10 py-2 text-xs font-semibold text-white hover:bg-white/20" aria-label={collapsed ? "Perluas sidebar" : "Perkecil sidebar"}>
@@ -103,7 +104,7 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
           <div className="absolute inset-0 bg-navy/60" onClick={() => setMobile(false)} />
           <aside className="absolute left-0 top-0 flex h-full w-72 animate-slidein flex-col bg-gradient-to-b from-navy to-brand-700">
             <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
-              <div className="flex items-center gap-3"><GemasMark /><span className="text-lg font-extrabold text-white">GEMAS</span></div>
+              <div className="flex h-12 items-center rounded-xl bg-white px-3 py-1.5 shadow-card"><GemasLogo className="h-full" /></div>
               <button onClick={() => setMobile(false)} aria-label="Tutup menu" className="text-white"><X className="h-6 w-6" /></button>
             </div>
             <SidebarBody compact={false} />
@@ -114,7 +115,7 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-100 bg-white/90 px-3 backdrop-blur sm:px-5">
           <button className="rounded-lg p-2 text-navy hover:bg-slate-100 lg:hidden" onClick={() => setMobile(true)} aria-label="Buka menu"><Menu className="h-6 w-6" /></button>
-          <Link href="/home" className="flex items-center gap-2 lg:hidden"><GemasMark size={30} /><span className="font-extrabold text-navy">GEMAS</span></Link>
+          <Link href="/home" className="flex items-center lg:hidden" aria-label="GEMAS"><GemasLogo className="h-9" /></Link>
           <div className="hidden min-w-0 lg:block">
             <div className="text-sm font-extrabold text-navy">GEMAS</div>
             <div className="truncate text-[11px] text-slate-500">General Services Monitoring &amp; Archive System</div>

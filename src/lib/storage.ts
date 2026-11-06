@@ -3,6 +3,8 @@ import path from "path";
 import crypto from "crypto";
 import { Readable } from "stream";
 import { UPLOAD_DIR } from "./store";
+import { autoInitializeGoogleWorkspace, getActiveDriveFolderId, getActiveFileDriver, getGoogleClients, loadGoogleCredentials } from "./google";
+import { getLocalSnapshot, getStore } from "./db";
 
 export type FileKind = "excel" | "pdf" | "image" | "document";
 
@@ -57,38 +59,95 @@ export async function validateUpload(file: File | null | undefined, kind: FileKi
   return { buffer, name, mime, size: buffer.length };
 }
 
-function drive() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const key = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-  if (!email || !key || !process.env.GOOGLE_DRIVE_FOLDER_ID) throw new Error("Konfigurasi Google Drive belum lengkap.");
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { google } = require("googleapis");
-  const auth = new google.auth.JWT(email, undefined, key, ["https://www.googleapis.com/auth/drive"]);
-  return google.drive({ version: "v3", auth });
+export interface FileIndexMeta {
+  title?: string;
+  entityId?: string;
+  uploadedBy?: string;
 }
 
-/** Menyimpan file; mengembalikan storage_ref ("local:..." atau "drive:<id>"). File Drive bersifat privat (tanpa link publik). */
-export async function saveFile(f: { buffer: Buffer; name: string; mime: string }, folder: string): Promise<string> {
+/** Menyimpan file; mengembalikan storage_ref ("local:..." atau "drive:<id>") dan mencatat otomatis ke tabel FILE_INDEX. */
+export async function saveFile(
+  f: { buffer: Buffer; name: string; mime: string },
+  folder: string,
+  meta: FileIndexMeta = {}
+): Promise<string> {
   const safe = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}-${f.name}`;
-  if ((process.env.FILE_DRIVER || "local") === "drive") {
-    const d = drive();
-    const res = await d.files.create({
-      requestBody: { name: `${folder}__${safe}`, parents: [process.env.GOOGLE_DRIVE_FOLDER_ID!] },
-      media: { mimeType: f.mime, body: Readable.from(f.buffer) },
-      fields: "id",
-    });
-    return `drive:${res.data.id}`;
+  let storageRef = "";
+  let fileUrl = "";
+
+  if (getActiveFileDriver() === "drive") {
+    let parentId = getActiveDriveFolderId(folder);
+    if (!parentId && loadGoogleCredentials()) {
+      const init = await autoInitializeGoogleWorkspace({ seedMode: "migrate", activate: true, localRowsProvider: getLocalSnapshot });
+      parentId = init.subfolders[folder.split("/")[0]] || init.driveFolderId;
+    }
+    if (!parentId) throw new Error("Folder Google Drive belum siap. Jalankan Inisialisasi Otomatis di menu Database & Cloud.");
+    const { drive } = getGoogleClients();
+    const prefix = folder.includes("/") ? `${folder.split("/").slice(1).join("_")}__` : "";
+    try {
+      const res = await drive.files.create({
+        requestBody: { name: `${prefix}${safe}`, parents: [parentId] },
+        media: { mimeType: f.mime, body: Readable.from(f.buffer) },
+        fields: "id, webViewLink",
+        supportsAllDrives: true,
+      });
+      const driveId = String(res.data.id);
+      storageRef = `drive:${driveId}`;
+      fileUrl = res.data.webViewLink || `https://drive.google.com/file/d/${driveId}/view`;
+    } catch (err: any) {
+      const msg = String(err?.response?.data?.error?.message || err?.message || err);
+      if (/storageQuotaExceeded|do not have storage quota/i.test(msg)) {
+        // Akun Gmail pribadi membatasi unggahan file biner oleh Service Account (0-byte quota);
+        // simpan file fisik ke folder uploads server sementara indeks & database utama tetap tercatat di Google Sheets.
+        const dir = path.join(UPLOAD_DIR, folder);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, safe), f.buffer);
+        storageRef = `local:${folder}/${safe}`;
+        fileUrl = storageRef;
+      } else {
+        throw err;
+      }
+    }
+  } else {
+    const dir = path.join(UPLOAD_DIR, folder);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, safe), f.buffer);
+    storageRef = `local:${folder}/${safe}`;
+    fileUrl = storageRef;
   }
-  const dir = path.join(UPLOAD_DIR, folder);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, safe), f.buffer);
-  return `local:${folder}/${safe}`;
+
+  // Catat otomatis ke tabel pelacak FILE_INDEX (ID, Title, FileURL, Timestamp, dll.)
+  try {
+    const store = await getStore();
+    const existing = await store.list("FILE_INDEX");
+    const nextNum = existing.reduce((m, r) => Math.max(m, Number((r.file_id || "").replace(/\D+/g, "")) || 0), 0) + 1;
+    const fileId = `FIL-${String(nextNum).padStart(4, "0")}`;
+    const trackedUrl = fileUrl.startsWith("local:") ? `/api/files/index/${fileId}` : fileUrl;
+    await store.insert("FILE_INDEX", [{
+      file_id: fileId,
+      title: meta.title || f.name,
+      category: folder.split("/")[0] || "general",
+      entity_id: meta.entityId || (folder.includes("/") ? folder.split("/")[1] : ""),
+      file_name: f.name,
+      mime_type: f.mime,
+      size_bytes: String(f.buffer.length),
+      storage_ref: storageRef,
+      file_url: trackedUrl,
+      uploaded_by: meta.uploadedBy || "SYSTEM",
+      timestamp: new Date().toISOString(),
+    }]);
+  } catch { /* jangan gagalkan unggahan utama bila pencatatan indeks sekunder terkendala */ }
+
+  return storageRef;
 }
 
 export async function readFile(ref: string): Promise<Buffer> {
   if (ref.startsWith("drive:")) {
-    const d = drive();
-    const res = await d.files.get({ fileId: ref.slice(6), alt: "media" }, { responseType: "arraybuffer" });
+    const { drive } = getGoogleClients();
+    const res = await drive.files.get(
+      { fileId: ref.slice(6), alt: "media", supportsAllDrives: true },
+      { responseType: "arraybuffer" }
+    );
     return Buffer.from(res.data as ArrayBuffer);
   }
   if (ref.startsWith("local:")) {

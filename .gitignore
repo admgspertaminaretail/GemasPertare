@@ -4,6 +4,10 @@ node_modules
 .env
 .env.local
 data/db.json
+data/cloud-config.json
+data/login-guard.json
 data/uploads
+credentials/*.json
+*service-account*.json
 next-env.d.ts
 *.tsbuildinfo

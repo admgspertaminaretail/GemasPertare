@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import Link from "next/link";
 import { STATUS_STYLE, StatusValue } from "@/lib/constants";
 
 export function StatusBadge({ status }: { status: string }) {
@@ -28,15 +29,30 @@ export function PageHeader({ title, subtitle, actions, icon }: { title: string; 
 const TONES: Record<string, string> = {
   blue: "bg-brand text-white", navy: "bg-navy text-white", red: "bg-prtred text-white", green: "bg-prtgreen text-white", amber: "bg-amber-500 text-white", slate: "bg-slate-500 text-white",
 };
-export function KpiCard({ label, value, hint, icon, tone = "blue" }: { label: string; value: ReactNode; hint?: string; icon?: ReactNode; tone?: keyof typeof TONES }) {
-  return (
-    <div className="card flex items-center gap-4 p-4" title={hint}>
+export function KpiCard({ label, value, hint, icon, tone = "blue", onClick, href }: { label: string; value: ReactNode; hint?: string; icon?: ReactNode; tone?: keyof typeof TONES; onClick?: () => void; href?: string }) {
+  const body = (
+    <>
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${TONES[tone]}`}>{icon}</div>
       <div className="min-w-0">
         <div className="text-2xl font-extrabold leading-none text-navy">{value}</div>
         <div className="mt-1 truncate text-xs font-medium text-slate-500">{label}</div>
       </div>
-    </div>
+    </>
+  );
+  const titleText = hint ? `${hint} — klik untuk buka Rincian Data Monitoring` : "Klik untuk buka Rincian Data Monitoring";
+  const interactiveCls = "card flex w-full items-center gap-4 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-pop focus:outline-none focus-visible:ring-2 focus-visible:ring-brand";
+  if (href) {
+    return (
+      <Link href={href} title={titleText} className={interactiveCls}>
+        {body}
+      </Link>
+    );
+  }
+  if (!onClick) return <div className="card flex items-center gap-4 p-4" title={hint}>{body}</div>;
+  return (
+    <button type="button" onClick={onClick} title={titleText} className={interactiveCls}>
+      {body}
+    </button>
   );
 }
 

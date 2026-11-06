@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { Row, SCHEMA, TABLES, TableName, PK } from "./schema";
+import { Row, SCHEMA, TABLES, TableName, PK, normalize } from "./schema";
+import { getActiveSheetsId, getGoogleClients } from "./google";
+export { normalize };
 
 /** Abstraksi database. Dua adapter: file JSON lokal (demo/dev) dan Google Sheets (produksi awal). */
 export interface Store {
@@ -10,15 +12,6 @@ export interface Store {
   update(t: TableName, id: string, patch: Partial<Row>): Promise<void>;
   replaceAll(t: TableName, rows: Row[]): Promise<void>;
   deleteWhere(t: TableName, pred: (r: Row) => boolean): Promise<void>;
-}
-
-export function normalize(t: TableName, r: Partial<Row>): Row {
-  const out: Row = {};
-  for (const c of SCHEMA[t]) {
-    const v = (r as Row)[c];
-    out[c] = v === undefined || v === null ? "" : String(v);
-  }
-  return out;
 }
 
 /* ------------------------------ Local JSON ------------------------------ */
@@ -46,25 +39,29 @@ export class LocalStore implements Store {
     fs.writeFileSync(tmp, JSON.stringify(this.db));
     fs.renameSync(tmp, DB_FILE);
   }
+  private table(t: TableName): Row[] {
+    if (!Array.isArray(this.db[t])) this.db[t] = [];
+    return this.db[t];
+  }
   async list(t: TableName) {
-    return this.db[t].map((r) => ({ ...r }));
+    return this.table(t).map((r) => ({ ...r }));
   }
   async insert(t: TableName, rows: Row[]) {
-    this.db[t].push(...rows.map((r) => normalize(t, r)));
+    this.table(t).push(...(rows || []).map((r) => normalize(t, r)));
     this.persist();
   }
   async update(t: TableName, id: string, patch: Partial<Row>) {
-    const row = this.db[t].find((r) => r[PK[t]] === id);
+    const row = this.table(t).find((r) => r[PK[t]] === id);
     if (!row) throw new Error(`${t}: ${id} tidak ditemukan`);
     Object.assign(row, normalize(t, { ...row, ...patch }));
     this.persist();
   }
   async replaceAll(t: TableName, rows: Row[]) {
-    this.db[t] = rows.map((r) => normalize(t, r));
+    this.db[t] = (rows || []).map((r) => normalize(t, r));
     this.persist();
   }
   async deleteWhere(t: TableName, pred: (r: Row) => boolean) {
-    this.db[t] = this.db[t].filter((r) => !pred(r));
+    this.db[t] = this.table(t).filter((r) => !pred(r));
     this.persist();
   }
 }
@@ -80,23 +77,20 @@ function colLetter(n: number) {
   return s;
 }
 
+const SHEETS_CACHE_TTL_MS = 5000;
+
 export class SheetsStore implements Store {
   readonly driver = "sheets" as const;
   private cache = new Map<TableName, { at: number; rows: Row[] }>();
+  private invalidatedAt = new Map<TableName, number>();
+  private batchInflight: Promise<void> | null = null;
   private sheetsApi: any;
   private id: string;
-  constructor() {
-    const id = process.env.GOOGLE_SHEETS_ID;
-    const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const key = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-    if (!id || !email || !key) throw new Error("Konfigurasi Google Sheets belum lengkap (GOOGLE_SHEETS_ID / SERVICE_ACCOUNT).");
+  constructor(spreadsheetId?: string) {
+    const id = spreadsheetId || getActiveSheetsId();
+    if (!id) throw new Error("GOOGLE_SHEETS_ID belum diatur. Jalankan Inisialisasi Otomatis di menu Database & Cloud terlebih dahulu.");
     this.id = id;
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { google } = require("googleapis");
-    const auth = new google.auth.JWT(email, undefined, key, [
-      "https://www.googleapis.com/auth/spreadsheets",
-    ]);
-    this.sheetsApi = google.sheets({ version: "v4", auth });
+    this.sheetsApi = getGoogleClients().sheets;
   }
 
   /** Membuat tab + header untuk seluruh tabel yang belum ada. */
@@ -116,22 +110,67 @@ export class SheetsStore implements Store {
     }
   }
 
-  private async fetch(t: TableName): Promise<Row[]> {
-    const c = this.cache.get(t);
-    if (c && Date.now() - c.at < 2000) return c.rows;
-    const res = await this.sheetsApi.spreadsheets.values.get({
-      spreadsheetId: this.id,
-      range: `${t}!A2:${colLetter(SCHEMA[t].length)}`,
-      valueRenderOption: "UNFORMATTED_VALUE",
-    });
-    const rows: Row[] = (res.data.values || [])
+  private parseSheetValues(t: TableName, values: any[][] | undefined): Row[] {
+    return (values || [])
       .filter((v: any[]) => v && v.length && String(v[0] ?? "") !== "")
       .map((v: any[]) => {
         const o: Row = {};
         SCHEMA[t].forEach((col, i) => (o[col] = v[i] === undefined || v[i] === null ? "" : String(v[i])));
         return o;
       });
-    this.cache.set(t, { at: Date.now(), rows });
+  }
+
+  private invalidate(t: TableName) {
+    this.invalidatedAt.set(t, Date.now());
+    this.cache.delete(t);
+  }
+
+  private isFresh(t: TableName): boolean {
+    const c = this.cache.get(t);
+    return !!c && Date.now() - c.at < SHEETS_CACHE_TTL_MS;
+  }
+
+  private async fetch(t: TableName): Promise<Row[]> {
+    if (this.isFresh(t)) return this.cache.get(t)!.rows;
+
+    const staleTables = TABLES.filter((tb) => !this.isFresh(tb));
+    if (staleTables.length > 1) {
+      if (!this.batchInflight) {
+        const targets = [...staleTables];
+        const startedAt = Date.now();
+        this.batchInflight = (async () => {
+          try {
+            const res = await this.sheetsApi.spreadsheets.values.batchGet({
+              spreadsheetId: this.id,
+              ranges: targets.map((tb) => `${tb}!A2:${colLetter(SCHEMA[tb].length)}`),
+              valueRenderOption: "UNFORMATTED_VALUE",
+            });
+            const ranges = res.data.valueRanges || [];
+            const now = Date.now();
+            targets.forEach((tb, idx) => {
+              if ((this.invalidatedAt.get(tb) || 0) <= startedAt) {
+                this.cache.set(tb, { at: now, rows: this.parseSheetValues(tb, ranges[idx]?.values) });
+              }
+            });
+          } finally {
+            this.batchInflight = null;
+          }
+        })();
+      }
+      await this.batchInflight;
+      if (this.cache.has(t)) return this.cache.get(t)!.rows;
+    }
+
+    const startedAt = Date.now();
+    const res = await this.sheetsApi.spreadsheets.values.get({
+      spreadsheetId: this.id,
+      range: `${t}!A2:${colLetter(SCHEMA[t].length)}`,
+      valueRenderOption: "UNFORMATTED_VALUE",
+    });
+    const rows = this.parseSheetValues(t, res.data.values);
+    if ((this.invalidatedAt.get(t) || 0) <= startedAt) {
+      this.cache.set(t, { at: Date.now(), rows });
+    }
     return rows;
   }
   async list(t: TableName) {
@@ -147,10 +186,10 @@ export class SheetsStore implements Store {
       insertDataOption: "INSERT_ROWS",
       requestBody: { values },
     });
-    this.cache.delete(t);
+    this.invalidate(t);
   }
   async update(t: TableName, id: string, patch: Partial<Row>) {
-    this.cache.delete(t);
+    this.invalidate(t);
     const rows = await this.fetch(t);
     const idx = rows.findIndex((r) => r[PK[t]] === id);
     if (idx < 0) throw new Error(`${t}: ${id} tidak ditemukan`);
@@ -161,11 +200,11 @@ export class SheetsStore implements Store {
       valueInputOption: "RAW",
       requestBody: { values: [SCHEMA[t].map((c) => merged[c])] },
     });
-    this.cache.delete(t);
+    this.invalidate(t);
   }
   async replaceAll(t: TableName, rows: Row[]) {
     await this.sheetsApi.spreadsheets.values.clear({ spreadsheetId: this.id, range: `${t}!A2:${colLetter(SCHEMA[t].length)}` });
-    this.cache.delete(t);
+    this.invalidate(t);
     // append dalam potongan agar tidak melebihi batas payload
     for (let i = 0; i < rows.length; i += 500) await this.insert(t, rows.slice(i, i + 500));
   }

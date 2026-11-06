@@ -13,7 +13,7 @@ export async function api<T = any>(url: string, body?: unknown, method = "POST")
   }
   let data: any = null;
   try { data = await res.json(); } catch { /* bukan JSON */ }
-  if (res.status === 401) { window.location.href = "/login"; throw new Error("Sesi berakhir."); }
+  if (res.status === 401 && !url.startsWith("/api/auth/login")) { window.location.href = "/login"; throw new Error("Sesi berakhir."); }
   if (!res.ok) throw new Error(data?.error || `Permintaan gagal (${res.status}).`);
   return data as T;
 }

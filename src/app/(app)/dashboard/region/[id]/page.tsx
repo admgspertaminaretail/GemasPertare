@@ -12,7 +12,7 @@ export default async function RegionDetail({ params, searchParams }: { params: {
   const u = await requireUser();
   if (u.role === "ADMIN_SPBU") notFound();
   if (u.role === "ADMIN_REGION" && u.regionId !== params.id) notFound(); // Region lain tidak boleh diakses
-  const filters = { year: searchParams.year || "", region: params.id, spbu: searchParams.spbu || "", status: searchParams.status || "", fupa: searchParams.fupa || "", memo: searchParams.memo || "" };
+  const filters = { year: searchParams.year || "", region: params.id, spbu: searchParams.spbu || "", subId: searchParams.subId || "", status: searchParams.status || "", fupa: searchParams.fupa || "", memo: searchParams.memo || "" };
   const data = await getDashboard(u, filters);
   const region = data.regions.find((r) => r.region_id === params.id);
   if (!region) notFound();

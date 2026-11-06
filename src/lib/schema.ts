@@ -57,6 +57,10 @@ export const SCHEMA = {
   ACTIVITY_LOGS: [
     "log_id", "timestamp", "user_id", "user_name", "role_id", "action", "entity_type", "entity_id", "details",
   ],
+  FILE_INDEX: [
+    "file_id", "title", "category", "entity_id", "file_name", "mime_type",
+    "size_bytes", "storage_ref", "file_url", "uploaded_by", "timestamp",
+  ],
 } as const;
 
 export type TableName = keyof typeof SCHEMA;
@@ -65,3 +69,12 @@ export const TABLES = Object.keys(SCHEMA) as TableName[];
 export const PK: Record<TableName, string> = Object.fromEntries(
   TABLES.map((t) => [t, SCHEMA[t][0]])
 ) as Record<TableName, string>;
+
+export function normalize(t: TableName, r: Partial<Row>): Row {
+  const out: Row = {};
+  for (const c of SCHEMA[t]) {
+    const v = (r as Row)[c];
+    out[c] = v === undefined || v === null ? "" : String(v);
+  }
+  return out;
+}

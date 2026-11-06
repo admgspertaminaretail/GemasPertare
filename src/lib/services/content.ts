@@ -31,7 +31,7 @@ export async function saveTemplate(u: SessionUser, fd: FormData, editId?: string
   const patch: Partial<Row> = { name, category, version, description: str(fd, "description"), usage_info: str(fd, "usage_info"), updated_at: nowIso(), updated_by: u.name, is_demo: "0" };
   if (file) {
     const v = await validateUpload(file, "document", "File template");
-    Object.assign(patch, { file_name: v.name, mime: v.mime, size: String(v.size), storage_ref: await saveFile(v, "templates") });
+    Object.assign(patch, { file_name: v.name, mime: v.mime, size: String(v.size), storage_ref: await saveFile(v, "templates", { title: `${name} v${version}`, entityId: editId || "TEMPLATE", uploadedBy: u.name }) });
   }
   if (editId) {
     if (!(await store.list("TEMPLATES")).some((t) => t.template_id === editId)) throw new HttpError(404, "Template tidak ditemukan.");
@@ -73,7 +73,7 @@ export async function saveKnowledge(u: SessionUser, fd: FormData, editId?: strin
   };
   if (file) {
     const v = await validateUpload(file, "document", "File dokumen");
-    Object.assign(patch, { file_name: v.name, mime: v.mime, size: String(v.size), storage_ref: await saveFile(v, "knowledge"), uploaded_at: nowIso() });
+    Object.assign(patch, { file_name: v.name, mime: v.mime, size: String(v.size), storage_ref: await saveFile(v, "knowledge", { title, entityId: editId || "KNOWLEDGE", uploadedBy: u.name }), uploaded_at: nowIso() });
   }
   let id = editId || "";
   if (editId) {

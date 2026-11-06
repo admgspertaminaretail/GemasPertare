@@ -125,7 +125,7 @@ async function saveDoc(
   u: SessionUser, sid: string, rev: string, type: string, f: ValidatedFile, meta = ""
 ) {
   const store = await getStore();
-  const ref = await saveFile(f, `submissions/${sid}`);
+  const ref = await saveFile(f, `submissions/${sid}`, { title: `${rev} — ${type} (${f.name})`, entityId: rev, uploadedBy: u.name });
   const id = `DOC-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`.toUpperCase();
   await store.insert("SUBMISSION_DOCUMENTS", [
     { doc_id: id, submission_id: sid, revision_id: rev, doc_type: type, file_name: f.name, mime: f.mime, size: String(f.size),
@@ -134,7 +134,7 @@ async function saveDoc(
 }
 async function savePhoto(u: SessionUser, sid: string, rev: string, f: ValidatedFile) {
   const store = await getStore();
-  const ref = await saveFile(f, `submissions/${sid}`);
+  const ref = await saveFile(f, `submissions/${sid}`, { title: `${rev} — Foto Arsip (${f.name})`, entityId: rev, uploadedBy: u.name });
   await store.insert("SUBMISSION_PHOTOS", [
     { photo_id: `PH-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`.toUpperCase(), submission_id: sid, revision_id: rev,
       file_name: f.name, mime: f.mime, size: String(f.size), storage_ref: ref, uploaded_by: u.userId, uploaded_at: nowIso(), is_current: "1" },

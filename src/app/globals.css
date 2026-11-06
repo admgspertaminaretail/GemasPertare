@@ -25,3 +25,9 @@ body { font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif; -we
 .scroll-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
 .skeleton { background: linear-gradient(90deg,#eef2f7 25%,#f8fafc 37%,#eef2f7 63%); background-size: 400% 100%; animation: sk 1.4s ease infinite; }
 @keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* grafik dashboard yang bisa diklik */
+.clickable-chart .recharts-sector,
+.clickable-chart .recharts-rectangle,
+.clickable-chart .recharts-bar-rectangle,
+.clickable-chart .recharts-legend-item { cursor: pointer; }

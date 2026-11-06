@@ -10,7 +10,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Re
   const u = await requireUser();
   const filters = {
     year: searchParams.year || "", region: searchParams.region || "", spbu: searchParams.spbu || "",
-    status: searchParams.status || "", fupa: searchParams.fupa || "", memo: searchParams.memo || "",
+    subId: searchParams.subId || "", status: searchParams.status || "", fupa: searchParams.fupa || "", memo: searchParams.memo || "",
   };
   const data = await getDashboard(u, filters);
   const title = data.scope === "HO" ? "Dashboard Head Office" : data.scope === "REGION" ? "Dashboard Region" : "Dashboard SPBU";

@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { getStore } from "../db";
-import { SessionUser, HttpError, hashPassword, verifyPassword } from "../auth";
+import { SessionUser, HttpError, hashPassword, verifyPassword, clearLoginGuard } from "../auth";
 import { Row } from "../schema";
 import { logActivity, nowIso, nextId } from "./core";
 import { validateUpload } from "../storage";
@@ -158,7 +158,11 @@ export async function saveUser(u: SessionUser, input: Partial<Row> & { password?
   if (editId) {
     if (!users.some((x) => x.user_id === editId)) throw new HttpError(404, "Pengguna tidak ditemukan.");
     const patch: Partial<Row> = { ...data };
-    if (input.password) { validPassword(input.password); patch.password_hash = hashPassword(input.password); }
+    if (input.password) {
+      validPassword(input.password);
+      patch.password_hash = hashPassword(input.password);
+      clearLoginGuard(username);
+    }
     await store.update("USERS", editId, patch);
     await logActivity(u, "UBAH_PENGGUNA", "USER", editId, username);
   } else {
@@ -173,8 +177,10 @@ export async function toggleUser(u: SessionUser, id: string, active: boolean) {
   must(u);
   if (id === u.userId && !active) throw new HttpError(400, "Anda tidak dapat menonaktifkan akun sendiri.");
   const store = await getStore();
-  if (!(await store.list("USERS")).some((x) => x.user_id === id)) throw new HttpError(404, "Pengguna tidak ditemukan.");
+  const target = (await store.list("USERS")).find((x) => x.user_id === id);
+  if (!target) throw new HttpError(404, "Pengguna tidak ditemukan.");
   await store.update("USERS", id, { is_active: active ? "1" : "0" });
+  if (active) clearLoginGuard(target.username);
   await logActivity(u, active ? "AKTIFKAN_PENGGUNA" : "NONAKTIFKAN_PENGGUNA", "USER", id);
 }
 
