@@ -76,7 +76,6 @@ export async function getSession(): Promise<SessionUser | null> {
       employeeId: (u.employee_id || "").trim(),
       phone: (u.phone || "").trim(),
     };
-    };
   } catch {
     return null;
   }
