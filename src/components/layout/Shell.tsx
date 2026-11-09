@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Sparkles,
   UserCheck,
+  ArrowRight,
 } from "lucide-react";
 import { GemasLogo, PertaminaLogo } from "../art/Logos";
 import { Mascot } from "../art/Mascot";
@@ -68,16 +69,50 @@ const GENERAL_NAV: NavItem[] = [
   { href: "/ask", label: "Tanya si GEMAS", icon: Bot },
 ];
 
-// Khusus Admin SPBU: layout disederhanakan dengan sekat sesuai permintaan
-const SPBU_PRIMARY_NAV: NavItem[] = [
-  { href: "/home", label: "Beranda", icon: Home },
-  { href: "/submissions", label: "Pengajuan Usul Musnah", icon: FilePlus2 },
-  { href: "/info", label: "Pusat Informasi Arsip", icon: BookOpen },
+interface SpbuNavItem {
+  href: string;
+  label: string;
+  sublabel: string;
+  icon: any;
+  badge?: string;
+}
+
+// Khusus Admin SPBU: layout dirancang terstruktur dan profesional sesuai peran operasional
+const SPBU_PRIMARY_NAV: SpbuNavItem[] = [
+  {
+    href: "/home",
+    label: "Beranda",
+    sublabel: "Dashboard ringkas & capaian",
+    icon: Home,
+  },
+  {
+    href: "/submissions",
+    label: "Pengajuan Usul Musnah",
+    sublabel: "Formulir & unggah berkas arsip",
+    icon: FilePlus2,
+    badge: "Utama",
+  },
+  {
+    href: "/info",
+    label: "Pusat Informasi Arsip",
+    sublabel: "Pedoman, JRDP & Sprint",
+    icon: BookOpen,
+  },
 ];
 
-const SPBU_SECONDARY_NAV: NavItem[] = [
-  { href: "/detail-monitoring", label: "Rincian Data Monitoring", icon: ClipboardList },
-  { href: "/kronologis-pengajuan", label: "Kronologis ID Pengajuan", icon: ListOrdered },
+const SPBU_SECONDARY_NAV: SpbuNavItem[] = [
+  {
+    href: "/detail-monitoring",
+    label: "Rincian Data Monitoring",
+    sublabel: "Tabel status berkas SPBU",
+    icon: ClipboardList,
+  },
+  {
+    href: "/kronologis-pengajuan",
+    label: "Kronologis ID Pengajuan",
+    sublabel: "Buku catatan & riwayat ID",
+    icon: ListOrdered,
+  },
 ];
 
 // Sekat Administrasi
@@ -160,8 +195,8 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
 
   const isSpbu = user.role === "ADMIN_SPBU";
   const generalItems = filterRole(GENERAL_NAV);
-  const spbuPrimaryItems = filterRole(SPBU_PRIMARY_NAV);
-  const spbuSecondaryItems = filterRole(SPBU_SECONDARY_NAV);
+  const spbuPrimaryItems = SPBU_PRIMARY_NAV;
+  const spbuSecondaryItems = SPBU_SECONDARY_NAV;
   const adminItems = filterRole(ADMIN_NAV);
   const askActive = active("/ask");
 
@@ -183,28 +218,129 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
     );
   };
 
+  const renderSpbuLink = (n: SpbuNavItem, compact: boolean) => {
+    const I = n.icon;
+    const isActive = active(n.href);
+    if (compact) {
+      return (
+        <Link
+          key={n.href}
+          href={n.href}
+          title={`${n.label} — ${n.sublabel}`}
+          aria-current={isActive ? "page" : undefined}
+          className={`relative mx-auto flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-150 ${
+            isActive
+              ? "bg-white text-navy shadow-md ring-1 ring-black/5"
+              : "text-slate-300 hover:bg-white/[0.08] hover:text-white"
+          }`}
+        >
+          {isActive && (
+            <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-brand" />
+          )}
+          <I className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.8} />
+        </Link>
+      );
+    }
+    return (
+      <Link
+        key={n.href}
+        href={n.href}
+        title={n.label}
+        aria-current={isActive ? "page" : undefined}
+        className={`group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-all duration-150 ${
+          isActive
+            ? "bg-white text-navy shadow-md ring-1 ring-black/5"
+            : "text-slate-200 hover:bg-white/[0.08] hover:text-white"
+        }`}
+      >
+        {/* Active indicator bar */}
+        {isActive && (
+          <span className="absolute -left-1 top-2.5 bottom-2.5 w-1.5 rounded-full bg-brand" />
+        )}
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${
+            isActive
+              ? "bg-brand/10 text-brand"
+              : "bg-white/[0.06] text-slate-300 group-hover:bg-white/[0.12] group-hover:text-white"
+          }`}
+        >
+          <I className="h-5 w-5" strokeWidth={isActive ? 2.2 : 1.8} />
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <div className="flex items-center justify-between gap-1">
+            <span className={`truncate text-xs font-bold leading-tight ${isActive ? "text-navy" : "text-white"}`}>
+              {n.label}
+            </span>
+            {n.badge && (
+              <span
+                className={`rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${
+                  isActive
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30"
+                }`}
+              >
+                {n.badge}
+              </span>
+            )}
+          </div>
+          <div
+            className={`truncate text-[10.5px] leading-snug mt-0.5 ${
+              isActive ? "text-slate-500 font-medium" : "text-slate-400 group-hover:text-slate-300"
+            }`}
+          >
+            {n.sublabel}
+          </div>
+        </div>
+      </Link>
+    );
+  };
+
   const SidebarBody = ({ compact }: { compact: boolean }) => (
     <div className="flex flex-1 flex-col overflow-hidden">
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 scroll-thin" aria-label="Navigasi utama">
         {isSpbu ? (
           <>
-            {/* Bagian 1 Khusus SPBU: Menu Utama */}
+            {/* SPBU Unit Operational Badge */}
             {!compact && (
-              <div className="mx-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-white/50">
-                Menu Utama
+              <div className="mx-1 mb-2.5 rounded-2xl bg-white/[0.06] border border-white/10 p-2.5 text-left shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse" />
+                    Unit Admin SPBU
+                  </span>
+                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300">
+                    {user.username}
+                  </span>
+                </div>
+                <div className="mt-1 truncate text-xs font-bold text-white" title={user.unit}>
+                  {user.unit}
+                </div>
               </div>
             )}
-            {spbuPrimaryItems.map((n) => renderLink(n, compact))}
 
-            {/* Sekat ke-2 Khusus SPBU: Monitoring & Data */}
-            <div className={`my-2.5 border-t border-white/20 ${compact ? "mx-1" : "mx-2 pt-2.5"}`}>
+            {/* Bagian 1 Khusus SPBU: Prosedur & Layanan Kearsipan */}
+            {!compact && (
+              <div className="mx-2 mb-1 mt-0.5 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400/80">
+                <span>Operasional Arsip</span>
+                <span className="text-[9px] font-semibold text-slate-500">3 Menu</span>
+              </div>
+            )}
+            <div className="space-y-1">
+              {spbuPrimaryItems.map((n) => renderSpbuLink(n, compact))}
+            </div>
+
+            {/* Bagian 2 Khusus SPBU: Monitoring & Riwayat (Sekat Terstruktur) */}
+            <div className={`my-3 border-t border-white/10 ${compact ? "mx-1" : "mx-2 pt-2.5"}`}>
               {!compact && (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-                  Monitoring &amp; Data
-                </span>
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400/80">
+                  <span>Monitoring &amp; Riwayat</span>
+                  <span className="text-[9px] font-semibold text-slate-500">2 Menu</span>
+                </div>
               )}
             </div>
-            {spbuSecondaryItems.map((n) => renderLink(n, compact))}
+            <div className="space-y-1">
+              {spbuSecondaryItems.map((n) => renderSpbuLink(n, compact))}
+            </div>
           </>
         ) : (
           <>
@@ -228,44 +364,88 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
         )}
       </nav>
 
-      {/* Paling Bawah: Kartu Tanya AI (khusus SPBU tampil menonjol dengan karakter lucu) */}
+      {/* Paling Bawah: Asisten Kearsipan Copilot (Desain Profesional untuk SPBU) */}
       {isSpbu && (
-        <div className="border-t border-white/20 p-3">
+        <div className="border-t border-white/10 p-3">
           {compact ? (
             <Link
               href="/ask"
-              title="Tanya si GEMAS (Asisten AI)"
-              className={`relative flex items-center justify-center rounded-2xl p-1.5 transition ${
+              title="Tanya si GEMAS (Asisten Kearsipan AI)"
+              className={`relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
                 askActive
-                  ? "bg-white ring-2 ring-amber-300 shadow-pop"
-                  : "bg-gradient-to-br from-amber-300/25 to-emerald-400/20 hover:from-amber-300/40 hover:to-emerald-400/30 ring-1 ring-white/20"
+                  ? "bg-white text-navy shadow-lg ring-2 ring-brand"
+                  : "bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10"
               }`}
             >
-              <Mascot size={42} className="animate-floaty" />
+              <div className="relative">
+                <Mascot size={32} />
+                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-navy" />
+              </div>
             </Link>
           ) : (
             <Link
               href="/ask"
-              className={`group relative flex items-center gap-2.5 overflow-hidden rounded-2xl p-2.5 transition ${
+              className={`group block rounded-2xl border p-3 transition-all duration-200 ${
                 askActive
-                  ? "bg-white text-navy shadow-pop ring-2 ring-amber-300"
-                  : "bg-gradient-to-r from-white/15 via-white/10 to-emerald-400/20 text-white ring-1 ring-white/25 hover:bg-white/20"
+                  ? "bg-white text-navy border-white shadow-lg ring-2 ring-brand/30"
+                  : "bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-white/10 hover:border-white/20 hover:bg-white/[0.12] text-white"
               }`}
             >
-              <div className="relative shrink-0 rounded-xl bg-white/90 p-0.5 shadow-sm">
-                <Mascot size={46} className="animate-floaty transition group-hover:scale-110" />
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl p-0.5 shadow-sm transition group-hover:scale-105 ${
+                    askActive ? "bg-brand/10 ring-1 ring-brand/20" : "bg-white/95"
+                  }`}
+                >
+                  <Mascot size={34} />
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-navy" />
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider ${
+                        askActive ? "text-brand" : "text-amber-300"
+                      }`}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Asisten Kearsipan
+                    </span>
+                    <span
+                      className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                        askActive ? "bg-brand/10 text-brand" : "bg-white/15 text-white/80"
+                      }`}
+                    >
+                      AI
+                    </span>
+                  </div>
+                  <div
+                    className={`truncate text-xs font-bold leading-tight mt-0.5 ${
+                      askActive ? "text-navy" : "text-white"
+                    }`}
+                  >
+                    Tanya si GEMAS
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
-                  <Sparkles className={`h-3 w-3 ${askActive ? "text-brand" : "text-amber-300"}`} />
-                  <span className={askActive ? "text-brand" : "text-amber-200"}>Tanya AI Arsip</span>
-                </div>
-                <div className={`truncate text-sm font-extrabold ${askActive ? "text-navy" : "text-white"}`}>
-                  Tanya si GEMAS
-                </div>
-                <div className={`truncate text-[11px] ${askActive ? "text-slate-500" : "text-white/75"}`}>
-                  Bingung soal arsip? Klik aku!
-                </div>
+              <p
+                className={`mt-2 text-[10.5px] leading-relaxed line-clamp-2 ${
+                  askActive ? "text-slate-600" : "text-slate-300/80"
+                }`}
+              >
+                Konsultasi masa retensi JRDP, syarat berkas, &amp; alur usul musnah SPBU.
+              </p>
+              <div
+                className={`mt-2.5 flex items-center justify-between border-t pt-2 text-[10.5px] font-bold transition ${
+                  askActive
+                    ? "border-slate-100 text-brand"
+                    : "border-white/10 text-white/90 group-hover:text-white"
+                }`}
+              >
+                <span>Buka Konsultasi</span>
+                <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
               </div>
             </Link>
           )}
@@ -277,26 +457,26 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
   return (
     <div className="flex min-h-screen">
       {/* sidebar desktop */}
-      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-gradient-to-b from-navy to-brand-700 transition-all duration-200 lg:flex ${collapsed ? "w-[76px]" : "w-72"}`}>
-        <div className={`flex h-16 items-center border-b border-white/10 px-4 ${collapsed ? "justify-center" : "gap-3"}`}>
+      <aside className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-gradient-to-b from-[#0B2138] via-navy to-[#0F2D4E] border-r border-white/[0.08] transition-all duration-200 lg:flex ${collapsed ? "w-[76px]" : "w-72"}`}>
+        <div className={`flex h-16 items-center border-b border-white/[0.08] px-4 ${collapsed ? "justify-center" : "gap-3"}`}>
           {collapsed
             ? <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white p-1.5 shadow-card"><GemasLogo variant="icon" className="h-full" /></div>
             : <div className="flex h-12 items-center rounded-xl bg-white px-3 py-1.5 shadow-card"><GemasLogo className="h-full" /></div>}
         </div>
         <SidebarBody compact={collapsed} />
-        <button onClick={toggle} className="mx-3 mb-3 flex items-center justify-center gap-2 rounded-xl bg-white/10 py-2 text-xs font-semibold text-white hover:bg-white/20" aria-label={collapsed ? "Perluas sidebar" : "Perkecil sidebar"}>
-          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" />Perkecil</>}
+        <button onClick={toggle} className="mx-3 mb-3 flex items-center justify-center gap-2 rounded-xl bg-white/[0.08] border border-white/10 py-2 text-xs font-semibold text-white/90 hover:bg-white/[0.15] hover:text-white transition" aria-label={collapsed ? "Perluas sidebar" : "Perkecil sidebar"}>
+          {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" />Perkecil Menu</>}
         </button>
       </aside>
 
       {/* drawer mobile */}
       {mobile && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-navy/60" onClick={() => setMobile(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-72 animate-slidein flex-col bg-gradient-to-b from-navy to-brand-700">
-            <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
+          <div className="absolute inset-0 bg-navy/60 backdrop-blur-sm" onClick={() => setMobile(false)} />
+          <aside className="absolute left-0 top-0 flex h-full w-72 animate-slidein flex-col bg-gradient-to-b from-[#0B2138] via-navy to-[#0F2D4E] border-r border-white/[0.08]">
+            <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-4">
               <div className="flex h-12 items-center rounded-xl bg-white px-3 py-1.5 shadow-card"><GemasLogo className="h-full" /></div>
-              <button onClick={() => setMobile(false)} aria-label="Tutup menu" className="text-white"><X className="h-6 w-6" /></button>
+              <button onClick={() => setMobile(false)} aria-label="Tutup menu" className="rounded-lg p-1.5 text-white/80 hover:bg-white/10 hover:text-white"><X className="h-6 w-6" /></button>
             </div>
             <SidebarBody compact={false} />
           </aside>
