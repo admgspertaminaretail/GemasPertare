@@ -205,6 +205,14 @@ export function getGoogleClients() {
       "File kunci Google Service Account belum ditemukan. Letakkan file JSON kunci di folder credentials/service-account.json."
     );
   }
+  try {
+    const crypto = require("crypto");
+    crypto.createPrivateKey(cred.privateKey);
+  } catch (err: any) {
+    throw new Error(
+      `Format GOOGLE_PRIVATE_KEY tidak valid (${err.message}). Panjang=${cred.privateKey.length}, Awal=[${cred.privateKey.slice(0, 35)}], Akhir=[${cred.privateKey.slice(-35)}]`
+    );
+  }
   const auth = new google.auth.JWT({
     email: cred.email,
     key: cred.privateKey,
