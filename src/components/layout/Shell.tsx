@@ -10,6 +10,8 @@ import {
   FileSpreadsheet,
   FilePlus2,
   Home,
+  LayoutDashboard,
+  Bot,
   Database,
   Users,
   ScrollText,
@@ -53,19 +55,29 @@ interface NavItem {
   roles?: string[];
 }
 
-// Urutan Utama: Beranda -> Pengajuan Usul -> Pusat Info
-const PRIMARY_NAV: NavItem[] = [
+// Navigasi lengkap untuk akun selain SPBU (ADMIN_PAM & ADMIN_REGION): tetap persis seperti semula
+const GENERAL_NAV: NavItem[] = [
+  { href: "/home", label: "Beranda", icon: Home },
+  { href: "/dashboard", label: "Dashboard Monitoring", icon: LayoutDashboard },
+  { href: "/detail-monitoring", label: "Rincian Data Monitoring", icon: ClipboardList },
+  { href: "/kronologis-pengajuan", label: "Kronologis ID Pengajuan", icon: ListOrdered },
+  { href: "/info", label: "Pusat Informasi Arsip", icon: BookOpen },
+  { href: "/tarikan-ibos", label: "Data Arsip Tarikan i-BOS", icon: FileSpreadsheet },
+  { href: "/templates", label: "Pusat Template", icon: FileDown },
+  { href: "/submissions", label: "Pengajuan Usul Musnah Arsip", icon: FilePlus2 },
+  { href: "/ask", label: "Tanya si GEMAS", icon: Bot },
+];
+
+// Khusus Admin SPBU: layout disederhanakan dengan sekat sesuai permintaan
+const SPBU_PRIMARY_NAV: NavItem[] = [
   { href: "/home", label: "Beranda", icon: Home },
   { href: "/submissions", label: "Pengajuan Usul Musnah", icon: FilePlus2 },
   { href: "/info", label: "Pusat Informasi Arsip", icon: BookOpen },
 ];
 
-// Sekat ke-2: Sisanya (khusus Admin SPBU tanpa menu tambahan template / tarikan i-BOS karena sudah jadi shortcut di Pengajuan)
-const SECONDARY_NAV: NavItem[] = [
+const SPBU_SECONDARY_NAV: NavItem[] = [
   { href: "/detail-monitoring", label: "Rincian Data Monitoring", icon: ClipboardList },
   { href: "/kronologis-pengajuan", label: "Kronologis ID Pengajuan", icon: ListOrdered },
-  { href: "/tarikan-ibos", label: "Data Arsip Tarikan i-BOS", icon: FileSpreadsheet, roles: ["ADMIN_PAM", "ADMIN_REGION"] },
-  { href: "/templates", label: "Pusat Template", icon: FileDown, roles: ["ADMIN_PAM", "ADMIN_REGION"] },
 ];
 
 // Sekat Administrasi
@@ -146,8 +158,10 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
   const active = (h: string) => (h === "/home" ? path === "/home" : path === h || path.startsWith(h + "/"));
   const filterRole = (arr: NavItem[]) => arr.filter((n) => !n.roles || n.roles.includes(user.role));
 
-  const primaryItems = filterRole(PRIMARY_NAV);
-  const secondaryItems = filterRole(SECONDARY_NAV);
+  const isSpbu = user.role === "ADMIN_SPBU";
+  const generalItems = filterRole(GENERAL_NAV);
+  const spbuPrimaryItems = filterRole(SPBU_PRIMARY_NAV);
+  const spbuSecondaryItems = filterRole(SPBU_SECONDARY_NAV);
   const adminItems = filterRole(ADMIN_NAV);
   const askActive = active("/ask");
 
@@ -172,17 +186,17 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
   const SidebarBody = ({ compact }: { compact: boolean }) => (
     <div className="flex flex-1 flex-col overflow-hidden">
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3 scroll-thin" aria-label="Navigasi utama">
-        {/* Bagian 1: Menu Utama */}
-        {!compact && (
-          <div className="mx-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-white/50">
-            Menu Utama
-          </div>
-        )}
-        {primaryItems.map((n) => renderLink(n, compact))}
-
-        {/* Sekat ke-2: Sisanya */}
-        {secondaryItems.length > 0 && (
+        {isSpbu ? (
           <>
+            {/* Bagian 1 Khusus SPBU: Menu Utama */}
+            {!compact && (
+              <div className="mx-2 mb-1 text-[10px] font-bold uppercase tracking-widest text-white/50">
+                Menu Utama
+              </div>
+            )}
+            {spbuPrimaryItems.map((n) => renderLink(n, compact))}
+
+            {/* Sekat ke-2 Khusus SPBU: Monitoring & Data */}
             <div className={`my-2.5 border-t border-white/20 ${compact ? "mx-1" : "mx-2 pt-2.5"}`}>
               {!compact && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
@@ -190,66 +204,73 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
                 </span>
               )}
             </div>
-            {secondaryItems.map((n) => renderLink(n, compact))}
+            {spbuSecondaryItems.map((n) => renderLink(n, compact))}
           </>
-        )}
-
-        {/* Sekat Administrasi */}
-        {adminItems.length > 0 && (
+        ) : (
           <>
-            <div className={`my-2.5 border-t border-white/20 ${compact ? "mx-1" : "mx-2 pt-2.5"}`}>
-              {!compact && (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
-                  Administrasi
-                </span>
-              )}
-            </div>
-            {adminItems.map((n) => renderLink(n, compact))}
+            {/* Menu Asli Lengkap untuk Akun Lain (Admin PAM & PIC Region) */}
+            {generalItems.map((n) => renderLink(n, compact))}
+
+            {/* Sekat Administrasi */}
+            {adminItems.length > 0 && (
+              <>
+                <div className={`my-2.5 border-t border-white/20 ${compact ? "mx-1" : "mx-2 pt-2.5"}`}>
+                  {!compact && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                      Administrasi
+                    </span>
+                  )}
+                </div>
+                {adminItems.map((n) => renderLink(n, compact))}
+              </>
+            )}
           </>
         )}
       </nav>
 
-      {/* Paling Bawah: Sekat + Tanya AI dengan Karakter Lucu */}
-      <div className="border-t border-white/20 p-3">
-        {compact ? (
-          <Link
-            href="/ask"
-            title="Tanya si GEMAS (Asisten AI)"
-            className={`relative flex items-center justify-center rounded-2xl p-1.5 transition ${
-              askActive
-                ? "bg-white ring-2 ring-amber-300 shadow-pop"
-                : "bg-gradient-to-br from-amber-300/25 to-emerald-400/20 hover:from-amber-300/40 hover:to-emerald-400/30 ring-1 ring-white/20"
-            }`}
-          >
-            <Mascot size={42} className="animate-floaty" />
-          </Link>
-        ) : (
-          <Link
-            href="/ask"
-            className={`group relative flex items-center gap-2.5 overflow-hidden rounded-2xl p-2.5 transition ${
-              askActive
-                ? "bg-white text-navy shadow-pop ring-2 ring-amber-300"
-                : "bg-gradient-to-r from-white/15 via-white/10 to-emerald-400/20 text-white ring-1 ring-white/25 hover:bg-white/20"
-            }`}
-          >
-            <div className="relative shrink-0 rounded-xl bg-white/90 p-0.5 shadow-sm">
-              <Mascot size={46} className="animate-floaty transition group-hover:scale-110" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
-                <Sparkles className={`h-3 w-3 ${askActive ? "text-brand" : "text-amber-300"}`} />
-                <span className={askActive ? "text-brand" : "text-amber-200"}>Tanya AI Arsip</span>
+      {/* Paling Bawah: Kartu Tanya AI (khusus SPBU tampil menonjol dengan karakter lucu) */}
+      {isSpbu && (
+        <div className="border-t border-white/20 p-3">
+          {compact ? (
+            <Link
+              href="/ask"
+              title="Tanya si GEMAS (Asisten AI)"
+              className={`relative flex items-center justify-center rounded-2xl p-1.5 transition ${
+                askActive
+                  ? "bg-white ring-2 ring-amber-300 shadow-pop"
+                  : "bg-gradient-to-br from-amber-300/25 to-emerald-400/20 hover:from-amber-300/40 hover:to-emerald-400/30 ring-1 ring-white/20"
+              }`}
+            >
+              <Mascot size={42} className="animate-floaty" />
+            </Link>
+          ) : (
+            <Link
+              href="/ask"
+              className={`group relative flex items-center gap-2.5 overflow-hidden rounded-2xl p-2.5 transition ${
+                askActive
+                  ? "bg-white text-navy shadow-pop ring-2 ring-amber-300"
+                  : "bg-gradient-to-r from-white/15 via-white/10 to-emerald-400/20 text-white ring-1 ring-white/25 hover:bg-white/20"
+              }`}
+            >
+              <div className="relative shrink-0 rounded-xl bg-white/90 p-0.5 shadow-sm">
+                <Mascot size={46} className="animate-floaty transition group-hover:scale-110" />
               </div>
-              <div className={`truncate text-sm font-extrabold ${askActive ? "text-navy" : "text-white"}`}>
-                Tanya si GEMAS
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-300">
+                  <Sparkles className={`h-3 w-3 ${askActive ? "text-brand" : "text-amber-300"}`} />
+                  <span className={askActive ? "text-brand" : "text-amber-200"}>Tanya AI Arsip</span>
+                </div>
+                <div className={`truncate text-sm font-extrabold ${askActive ? "text-navy" : "text-white"}`}>
+                  Tanya si GEMAS
+                </div>
+                <div className={`truncate text-[11px] ${askActive ? "text-slate-500" : "text-white/75"}`}>
+                  Bingung soal arsip? Klik aku!
+                </div>
               </div>
-              <div className={`truncate text-[11px] ${askActive ? "text-slate-500" : "text-white/75"}`}>
-                Bingung soal arsip? Klik aku!
-              </div>
-            </div>
-          </Link>
-        )}
-      </div>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 
