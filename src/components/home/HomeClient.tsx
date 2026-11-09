@@ -360,14 +360,14 @@ export function HomeClient({
 
   const regionalSpbuList = (regionalSpbus && regionalSpbus.length > 0)
     ? regionalSpbus
-    : topSpbus.filter((s) => s.region_name.includes(userRegionName || ""));
+    : (topSpbus || []).filter((s) => (s?.region_name || "").includes(userRegionName || ""));
 
-  const regionalSpbuChartData = regionalSpbuList.slice(0, 8).map((s: SpbuRankItem) => ({
-    name: s.spbu_name.replace(/^SPBU\s*[-–—]?\s*/i, "").split(" ")[0].slice(0, 10),
-    fullName: s.spbu_name,
-    code: s.spbu_code,
-    "Total Pengajuan": s.total_submissions,
-    "Selesai (Di-Memo)": s.memoed,
+  const regionalSpbuChartData = (regionalSpbuList || []).slice(0, 8).map((s: SpbuRankItem) => ({
+    name: String(s?.spbu_name || s?.spbu_code || "SPBU").replace(/^SPBU\s*[-–—]?\s*/i, "").split(" ")[0].slice(0, 10),
+    fullName: s?.spbu_name || s?.spbu_code || "-",
+    code: s?.spbu_code || "-",
+    "Total Pengajuan": s?.total_submissions || 0,
+    "Selesai (Di-Memo)": s?.memoed || 0,
   }));
 
   return (
@@ -952,7 +952,12 @@ export function HomeClient({
           {/* Kartu Peringkat Top 3 - Gaya Metallic Corporate */}
           <div className="mt-4 space-y-2.5">
             {leaderTab === "region" ? (
-              topRegions.map((r, i) => {
+              topRegions.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+                  Belum ada transaksi pengajuan di semua Region. Jadilah Region pertama yang menempati Peringkat 1! 🚀
+                </div>
+              ) : (
+                topRegions.map((r, i) => {
                 const rankMeta =
                   i === 0
                     ? {
@@ -1024,7 +1029,7 @@ export function HomeClient({
                   </div>
                 );
               })
-            ) : topSpbus.length === 0 ? (
+            )) : topSpbus.length === 0 ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
                 Belum ada pengajuan SPBU. Jadilah SPBU pertama yang menempati Peringkat 1! 🚀
               </div>
