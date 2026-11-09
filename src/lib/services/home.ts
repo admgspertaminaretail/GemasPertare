@@ -435,5 +435,6 @@ export async function getHomePageData(u: SessionUser) {
     myRegionRank: myRegionRankIndex >= 0 ? myRegionRankIndex + 1 : null,
     regions: regionsSummary,
     regionKpis,
+    regionalSpbus: spbuStatsAll.filter((s) => s.region_id === u.regionId),
   };
 }

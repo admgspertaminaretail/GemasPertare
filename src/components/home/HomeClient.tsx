@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Award,
   BookOpen,
+  Building2,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -120,6 +121,7 @@ export function HomeClient({
   myRegionRank,
   regions = [],
   regionKpis = {},
+  regionalSpbus = [],
 }: {
   role: RoleId;
   userDisplayName: string;
@@ -137,6 +139,7 @@ export function HomeClient({
   myRegionRank: number | null;
   regions?: { region_id: string; region_name: string; short_name: string }[];
   regionKpis?: Record<string, any>;
+  regionalSpbus?: SpbuRankItem[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -144,6 +147,7 @@ export function HomeClient({
 
   // Filter 7 Region khusus Admin PAM / Head Office ("ALL" = Semua Region / Nasional)
   const [pamRegionFilter, setPamRegionFilter] = useState<string>("ALL");
+  const [regionChartView, setRegionChartView] = useState<"status" | "spbu">("status");
 
   const activeSlides = slides.filter((s) => s.status === "Aktif");
   const displaySlides = activeSlides.length > 0 ? activeSlides : slides;
@@ -344,6 +348,26 @@ export function HomeClient({
     name: r.short_name,
     "Total Pengajuan": r.total_submissions,
     "Selesai (Di-Memo)": r.memoed,
+  }));
+
+  const regionalStatusChartData = [
+    { name: "Review", label: "Menunggu Review", count: activeKpi?.review || 0, fill: "#F59E0B" },
+    { name: "Revisi", label: "Perlu Revisi", count: activeKpi?.revision || 0, fill: "#E52329" },
+    { name: "Disetujui", label: "Disetujui", count: activeKpi?.approved || 0, fill: "#69B345" },
+    { name: "Pooling", label: "Pooling", count: activeKpi?.pooled || 0, fill: "#006CB7" },
+    { name: "Di-Memo", label: "Selesai (Di-Memo)", count: activeKpi?.memoed || 0, fill: "#163B63" },
+  ];
+
+  const regionalSpbuList = (regionalSpbus && regionalSpbus.length > 0)
+    ? regionalSpbus
+    : topSpbus.filter((s) => s.region_name.includes(userRegionName || ""));
+
+  const regionalSpbuChartData = regionalSpbuList.slice(0, 8).map((s: SpbuRankItem) => ({
+    name: s.spbu_name.replace(/^SPBU\s*[-–—]?\s*/i, "").split(" ")[0].slice(0, 10),
+    fullName: s.spbu_name,
+    code: s.spbu_code,
+    "Total Pengajuan": s.total_submissions,
+    "Selesai (Di-Memo)": s.memoed,
   }));
 
   return (
@@ -684,92 +708,203 @@ export function HomeClient({
 
       {/* 3. CHARTS TOTAL PENGAJUAN 7 REGION & PERINGKAT TOP 3 TERAKTIF */}
       <section className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
-        {/* GRAFIK 7 REGION - PALET KORPORAT PERTAMINA RESMI */}
+        {/* KARTU KIRI: GRAFIK MONITORING (ADMIN PAM: 7 REGION, PIC REGION: KHUSUS REGION SENDIRI) */}
         <div className="card flex flex-col justify-between border border-slate-200/80 bg-white p-5 sm:p-6 shadow-card">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-softblue px-2.5 py-0.5 text-[11px] font-extrabold text-brand">
-                <TrendingUp className="h-3.5 w-3.5" />
-                Statistik Nasional Terintegrasi
-              </div>
-              <h2 className="mt-1.5 text-lg font-extrabold text-navy">
-                Grafik Total Pengajuan dari {regionStats.length} Region
-              </h2>
-              <p className="text-xs text-slate-500">
-                Total <b>{nationalTotalSubmissions}</b> pengajuan usul musnah arsip terintegrasi dari seluruh Region PT Pertamina Retail.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={regionChartData} margin={{ top: 10, right: 12, left: -10, bottom: 5 }}>
-                <CartesianGrid vertical={false} stroke="#E5EAF1" strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "#163B63" }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748B" }} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const r = payload[0].payload as RegionRankItem;
-                    return (
-                      <div className="rounded-2xl bg-navy p-3.5 text-xs text-white shadow-pop">
-                        <div className="font-extrabold text-amber-300">
-                          {r.region_name} {r.is_my_region ? "· (Region Anda)" : ""}
-                        </div>
-                        {r.pic_name && (
-                          <div className="mt-0.5 text-[11px] text-sky-200">PIC Region: {r.pic_name}</div>
-                        )}
-                        <div className="mt-2 space-y-1 border-t border-white/15 pt-2">
-                          <div>Total Pengajuan: <b>{r.total_submissions}</b></div>
-                          <div>Selesai Di-Memo: <b>{r.memoed}</b></div>
-                          <div>SPBU Mengajukan: <b>{r.spbu_submitted}</b> / {r.total_spbu} SPBU ({r.participation_pct}%)</div>
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Bar dataKey="Total Pengajuan" radius={[6, 6, 0, 0]}>
-                  {regionChartData.map((entry) => (
-                    <Cell
-                      key={entry.region_id}
-                      fill={entry.is_my_region ? "#E52329" : "#006CB7"}
-                    />
-                  ))}
-                </Bar>
-                <Bar dataKey="Selesai (Di-Memo)" fill="#0F2C4B" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Legenda Korporat & Keterangan Rinci */}
-          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-            <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
-              <div className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-sm bg-[#006CB7]" />
-                <span className="font-semibold text-slate-700">Total Pengajuan</span>
-              </div>
-              {role !== "ADMIN_PAM" && (
-                <div className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-sm bg-[#E52329]" />
-                  <span className="font-bold text-[#E52329]">Region Anda</span>
+          {role === "ADMIN_PAM" ? (
+            /* ================= TAMPILAN ADMIN PAM (7 REGION NASIONAL) ================= */
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-softblue px-2.5 py-0.5 text-[11px] font-extrabold text-brand">
+                    <TrendingUp className="h-3.5 w-3.5" />
+                    Statistik Nasional Terintegrasi
+                  </div>
+                  <h2 className="mt-1.5 text-lg font-extrabold text-navy">
+                    Grafik Total Pengajuan dari {regionStats.length} Region
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Total <b>{nationalTotalSubmissions}</b> pengajuan usul musnah arsip terintegrasi dari seluruh Region PT Pertamina Retail.
+                  </p>
                 </div>
-              )}
-              <div className="flex items-center gap-1.5">
-                <span className="h-3 w-3 rounded-sm bg-[#0F2C4B]" />
-                <span className="font-semibold text-slate-700">Selesai (Di-Memo)</span>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-xs text-slate-600">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                {role !== "ADMIN_PAM"
-                  ? "Bar merah menandai capaian Region Anda saat ini."
-                  : "Data grafik diperbarui otomatis dari seluruh pengajuan Region I s.d. VII."}
-              </span>
-              <span className="font-bold text-navy">{regionStats.length} Region Aktif</span>
-            </div>
-          </div>
+              <div className="mt-4 h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={regionChartData} margin={{ top: 10, right: 12, left: -10, bottom: 5 }}>
+                    <CartesianGrid vertical={false} stroke="#E5EAF1" strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "#163B63" }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748B" }} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const r = payload[0].payload as RegionRankItem;
+                        return (
+                          <div className="rounded-2xl bg-navy p-3.5 text-xs text-white shadow-pop">
+                            <div className="font-extrabold text-amber-300">
+                              {r.region_name}
+                            </div>
+                            {r.pic_name && (
+                              <div className="mt-0.5 text-[11px] text-sky-200">PIC Region: {r.pic_name}</div>
+                            )}
+                            <div className="mt-2 space-y-1 border-t border-white/15 pt-2">
+                              <div>Total Pengajuan: <b>{r.total_submissions}</b></div>
+                              <div>Selesai Di-Memo: <b>{r.memoed}</b></div>
+                              <div>SPBU Mengajukan: <b>{r.spbu_submitted}</b> / {r.total_spbu} SPBU ({r.participation_pct}%)</div>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="Total Pengajuan" fill="#006CB7" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="Selesai (Di-Memo)" fill="#0F2C4B" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Legenda Korporat PAM */}
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded-sm bg-[#006CB7]" />
+                    <span className="font-semibold text-slate-700">Total Pengajuan</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded-sm bg-[#0F2C4B]" />
+                    <span className="font-semibold text-slate-700">Selesai (Di-Memo)</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-xs text-slate-600">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Data grafik diperbarui otomatis dari seluruh pengajuan Region I s.d. VII.
+                  </span>
+                  <span className="font-bold text-navy">{regionStats.length} Region Aktif</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* ================= TAMPILAN KHUSUS PIC REGION (HANYA REGION SENDIRI) ================= */
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-extrabold text-emerald-800 ring-1 ring-emerald-200">
+                    <Building2 className="h-3.5 w-3.5 text-emerald-600" />
+                    Statistik Wilayah {userRegionName || "Region Anda"}
+                  </div>
+                  <h2 className="mt-1.5 text-lg font-extrabold text-navy">
+                    Grafik Pengajuan {userRegionName || "Region Anda"}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Total <b>{activeKpi?.total || 0}</b> pengajuan dari <b>{activeKpi?.spbuSubmitted || 0}</b> unit SPBU aktif di wilayah {userRegionName || "Region Anda"}.
+                  </p>
+                </div>
+
+                {/* Sub-tab view: Status vs Unit SPBU */}
+                <div className="flex rounded-xl bg-slate-100 p-1 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setRegionChartView("status")}
+                    className={`rounded-lg px-2.5 py-1 transition ${
+                      regionChartView === "status" ? "bg-white text-navy shadow-sm" : "text-slate-500 hover:text-navy"
+                    }`}
+                  >
+                    Status Pengajuan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRegionChartView("spbu")}
+                    className={`rounded-lg px-2.5 py-1 transition ${
+                      regionChartView === "spbu" ? "bg-white text-navy shadow-sm" : "text-slate-500 hover:text-navy"
+                    }`}
+                  >
+                    Unit SPBU ({regionalSpbuList.length})
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  {regionChartView === "status" ? (
+                    <BarChart data={regionalStatusChartData} margin={{ top: 10, right: 12, left: -10, bottom: 5 }}>
+                      <CartesianGrid vertical={false} stroke="#E5EAF1" strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "#163B63" }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748B" }} />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="rounded-2xl bg-navy p-3 text-xs text-white shadow-pop">
+                              <div className="font-extrabold text-amber-300">{d.label}</div>
+                              <div className="mt-1">
+                                Jumlah: <b>{d.count} pengajuan</b>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="count" name="Jumlah Pengajuan" radius={[6, 6, 0, 0]}>
+                        {regionalStatusChartData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  ) : (
+                    <BarChart data={regionalSpbuChartData} margin={{ top: 10, right: 12, left: -10, bottom: 5 }}>
+                      <CartesianGrid vertical={false} stroke="#E5EAF1" strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700, fill: "#163B63" }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748B" }} />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="rounded-2xl bg-navy p-3.5 text-xs text-white shadow-pop">
+                              <div className="font-extrabold text-amber-300">{d.fullName}</div>
+                              <div className="text-[11px] text-sky-200">{d.code}</div>
+                              <div className="mt-2 space-y-1 border-t border-white/15 pt-2">
+                                <div>Total Pengajuan: <b>{d["Total Pengajuan"]}</b></div>
+                                <div>Selesai Di-Memo: <b>{d["Selesai (Di-Memo)"]}</b></div>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="Total Pengajuan" fill="#006CB7" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="Selesai (Di-Memo)" fill="#0F2C4B" radius={[6, 6, 0, 0]} />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+
+              {/* Legenda Korporat PIC Region */}
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                {regionChartView === "status" ? (
+                  <div className="flex flex-wrap items-center justify-center gap-3 text-[11px]">
+                    <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-[#F59E0B]" /><span>Review</span></div>
+                    <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-[#E52329]" /><span>Revisi</span></div>
+                    <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-[#69B345]" /><span>Disetujui</span></div>
+                    <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-[#006CB7]" /><span>Pooling</span></div>
+                    <div className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-[#163B63]" /><span>Selesai (Di-Memo)</span></div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
+                    <div className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#006CB7]" /><span className="font-semibold text-slate-700">Total Pengajuan</span></div>
+                    <div className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-[#0F2C4B]" /><span className="font-semibold text-slate-700">Selesai (Di-Memo)</span></div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-emerald-50/60 px-4 py-2 text-xs text-emerald-900 border border-emerald-100">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Menampilkan data khusus operasional wilayah {userRegionName || "Region Anda"}.
+                  </span>
+                  <span className="font-bold text-emerald-800">{activeKpi?.totalSpbu || regionalSpbuList.length} SPBU Terdaftar</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* PERINGKAT TOP 3 TERAKTIF — APRESIASI TERTIB ARSIP EKSEKUTIF */}

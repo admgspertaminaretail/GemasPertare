@@ -27,6 +27,7 @@ export default async function HomePage() {
       myRegionRank={data.myRegionRank}
       regions={data.regions}
       regionKpis={data.regionKpis}
+      regionalSpbus={data.regionalSpbus}
     />
   );
 }
