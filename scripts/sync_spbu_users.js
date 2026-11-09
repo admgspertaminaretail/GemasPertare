@@ -77,64 +77,50 @@ async function main() {
     existingDb = JSON.parse(fs.readFileSync(dbPath, "utf8"));
   }
 
-  // Filter akun non-SPBU (Admin PAM & PIC Region)
-  const nonSpbuUsers = (existingDb.USERS || []).filter(
-    (u) => u.role_id !== "ADMIN_SPBU"
-  );
+  // 3. Akun PAM dan PIC Region I s.d. VII (RESMI / NON-DEMO)
+  const ROMAN_NAMES = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
+  const nonSpbuUsers = [];
 
-  // Pastikan akun Admin PAM dan PIC Region I-VII ada dengan password 'gemas123'
-  let pamUser = nonSpbuUsers.find((u) => u.role_id === "ADMIN_PAM");
-  if (!pamUser) {
-    pamUser = {
-      user_id: "U-001",
-      username: "admin.pam",
-      full_name: "Admin PAM / Head Office",
-      email: "admin.pam@pertaminaretail.com",
+  // Akun Resmi Admin PAM (Non-Demo)
+  nonSpbuUsers.push({
+    user_id: "U-001",
+    username: "admin.pam",
+    full_name: "Admin PAM / Head Office",
+    email: "admin.pam@pertaminaretail.com",
+    password_hash: passwordHash,
+    role_id: "ADMIN_PAM",
+    region_id: "",
+    spbu_id: "",
+    is_active: "1",
+    is_demo: "0",
+    created_at: nowIso,
+    last_login: "",
+    profile_name: "Admin PAM Pusat",
+    employee_id: "",
+    phone: "",
+  });
+
+  // Akun Resmi PIC Region I s.d. VII (Non-Demo)
+  for (let r = 1; r <= 7; r++) {
+    const regId = `REG-${r}`;
+    const roman = ROMAN_NAMES[r];
+    nonSpbuUsers.push({
+      user_id: `U-${String(r + 1).padStart(3, "0")}`,
+      username: `pic.region${r}`,
+      full_name: `PIC Region ${roman}`,
+      email: `pic.region${r}@pertaminaretail.com`,
       password_hash: passwordHash,
-      role_id: "ADMIN_PAM",
-      region_id: "",
+      role_id: "ADMIN_REGION",
+      region_id: regId,
       spbu_id: "",
       is_active: "1",
       is_demo: "0",
       created_at: nowIso,
       last_login: "",
-      profile_name: "Admin PAM Pusat",
+      profile_name: `PIC Region ${roman}`,
       employee_id: "",
       phone: "",
-    };
-    nonSpbuUsers.unshift(pamUser);
-  } else {
-    pamUser.password_hash = passwordHash;
-  }
-
-  // PIC Region I s.d. VII
-  for (let r = 1; r <= 7; r++) {
-    const regId = `REG-${r}`;
-    let pic = nonSpbuUsers.find(
-      (u) => u.role_id === "ADMIN_REGION" && u.region_id === regId
-    );
-    if (!pic) {
-      pic = {
-        user_id: `U-00${r + 1}`,
-        username: `pic.region${r}`,
-        full_name: `PIC Region ${r}`,
-        email: `pic.region${r}@pertaminaretail.com`,
-        password_hash: passwordHash,
-        role_id: "ADMIN_REGION",
-        region_id: regId,
-        spbu_id: "",
-        is_active: "1",
-        is_demo: "0",
-        created_at: nowIso,
-        last_login: "",
-        profile_name: `PIC Region ${r}`,
-        employee_id: "",
-        phone: "",
-      };
-      nonSpbuUsers.push(pic);
-    } else {
-      pic.password_hash = passwordHash;
-    }
+    });
   }
 
   // 4. Buat Akun Admin SPBU untuk seluruh 182 SPBU

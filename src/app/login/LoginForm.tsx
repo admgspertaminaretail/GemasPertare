@@ -6,7 +6,6 @@ import {
   AlertCircle, ChevronDown, FlaskConical, Copy, Check, ShieldAlert,
 } from "lucide-react";
 import { SpbuScene } from "@/components/art/SpbuScene";
-import { DemoTag } from "@/components/ui/kit";
 import { Modal } from "@/components/ui/Modal";
 
 const SUPPORT_EMAIL = "adm.gs.pertaminaretail@gmail.com";
@@ -322,9 +321,9 @@ export function LoginForm({
                     </div>
                   ) : (
                     <p className="mt-1 text-[11px] text-amber-800/90">
-                      Contoh format valid: <code className="font-mono font-semibold">pam.demo</code>,{" "}
-                      <code className="font-mono font-semibold">region1.demo</code>, atau{" "}
-                      <code className="font-mono font-semibold">spbu3110202</code>.
+                      Contoh format valid: <code className="font-mono font-semibold">admin.pam</code>,{" "}
+                      <code className="font-mono font-semibold">pic.region1</code>, atau{" "}
+                      <code className="font-mono font-semibold">spbu11201101</code>.
                     </p>
                   )}
                 </div>
@@ -451,26 +450,25 @@ export function LoginForm({
             </button>
           </form>
 
-          {/* Akses Cepat Akun Demo (ringkas & dapat dibuka/tutup agar tampilan utama tetap bersih) */}
+          {/* Pintasan Masuk Cepat Akun */}
           {accounts.length > 0 && (
-            <div className="mt-4 rounded-2xl border border-amber-200/80 bg-amber-50/60 px-4 py-2.5">
+            <div className="mt-4 rounded-2xl border border-blue-200/80 bg-blue-50/60 px-4 py-2.5">
               <button
                 type="button"
                 onClick={() => setShowDemoPanel((v) => !v)}
-                className="flex w-full items-center justify-between text-left text-xs font-bold text-amber-800"
+                className="flex w-full items-center justify-between text-left text-xs font-bold text-blue-900"
               >
                 <span className="inline-flex items-center gap-2">
-                  <FlaskConical className="h-3.5 w-3.5" />
-                  Gunakan Akun Demo Cepat
-                  <DemoTag />
+                  <FlaskConical className="h-3.5 w-3.5 text-blue-600" />
+                  Pintasan Masuk Cepat (Preview Role)
                 </span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${showDemoPanel ? "rotate-180" : ""}`} />
               </button>
 
               {showDemoPanel && (
-                <div className="mt-3 border-t border-amber-200/70 pt-2.5">
-                  <p className="mb-2 text-[11px] text-amber-800/85">
-                    Klik akun untuk masuk otomatis (sandi: <code className="rounded bg-white px-1 font-mono font-bold">{demoPassword}</code>)
+                <div className="mt-3 border-t border-blue-200/70 pt-2.5">
+                  <p className="mb-2 text-[11px] text-slate-600">
+                    Klik akun untuk masuk langsung (kata sandi: <code className="rounded bg-white px-1 font-mono font-bold text-navy">{demoPassword || "gemas123"}</code>)
                   </p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {accounts.map((a) => (
@@ -479,13 +477,14 @@ export function LoginForm({
                         type="button"
                         disabled={busy}
                         onClick={() => {
+                          const pwd = demoPassword || "gemas123";
                           setUsername(a.username);
-                          setPassword(demoPassword);
+                          setPassword(pwd);
                           setNotFoundUser("");
                           setSuggestions([]);
-                          submit(undefined, a.username, demoPassword);
+                          submit(undefined, a.username, pwd);
                         }}
-                        className="rounded-xl bg-white p-2 text-left text-xs ring-1 ring-amber-200 transition hover:ring-brand"
+                        className="rounded-xl bg-white p-2 text-left text-xs ring-1 ring-blue-200 transition hover:ring-brand hover:shadow-sm"
                       >
                         <div className="font-bold text-navy">{a.label}</div>
                         <div className="font-mono text-[11px] font-semibold text-brand">{a.username}</div>

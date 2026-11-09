@@ -25,6 +25,21 @@ export async function POST(req: Request) {
       (x) =>
         x.username.toLowerCase() === uname ||
         (x.email && x.email.toLowerCase() === uname) ||
+        (x.role_id === "ADMIN_PAM" && (
+          uname === "pam" ||
+          uname === "admin" ||
+          uname === "admin.pam" ||
+          uname === "pam.demo" ||
+          cleanUname === "adminpam" ||
+          cleanUname === "pamdemo"
+        )) ||
+        (x.role_id === "ADMIN_REGION" && (
+          uname === `pic.region${x.region_id.replace(/\D/g, "")}` ||
+          uname === `region${x.region_id.replace(/\D/g, "")}` ||
+          uname === `region${x.region_id.replace(/\D/g, "")}.demo` ||
+          cleanUname === `picregion${x.region_id.replace(/\D/g, "")}` ||
+          cleanUname === `region${x.region_id.replace(/\D/g, "")}`
+        )) ||
         (x.role_id === "ADMIN_SPBU" && (
           x.spbu_id.toLowerCase() === cleanUname ||
           x.username.toLowerCase() === `spbu${cleanUname}`

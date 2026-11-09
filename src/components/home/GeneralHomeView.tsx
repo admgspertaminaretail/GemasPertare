@@ -469,12 +469,14 @@ export function GeneralHomeView({
                 </div>
               </div>
               <div>
-                <label className="label">Unggah Foto Slide (JPG/PNG, opsional)</label>
                 <FileField
-                  accept="image/png,image/jpeg"
+                  kind="image"
+                  required={false}
+                  label="Unggah Foto Slide (JPG/PNG, opsional)"
+                  hint="Format foto: JPG atau PNG. Jika dikosongkan, slide akan menggunakan ilustrasi bawaan SPBU."
+                  accept=".jpg,.jpeg,.png"
                   files={slideFiles}
                   onChange={setSlideFiles}
-                  helperText="Format foto: JPG atau PNG. Jika dikosongkan, slide akan menggunakan ilustrasi bawaan SPBU."
                 />
               </div>
             </div>
