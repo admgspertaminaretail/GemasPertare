@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { Readable } from "stream";
 import { UPLOAD_DIR } from "./store";
-import { autoInitializeGoogleWorkspace, getActiveDriveFolderId, getActiveFileDriver, getGoogleClients, loadGoogleCredentials } from "./google";
+import { autoInitializeGoogleWorkspace, getActiveAppsScriptUrl, getActiveDriveFolderId, getActiveFileDriver, getGoogleClients, loadGoogleCredentials } from "./google";
 import { getLocalSnapshot, getStore } from "./db";
 
 export type FileKind = "excel" | "pdf" | "image" | "document";
@@ -65,7 +65,37 @@ export interface FileIndexMeta {
   uploadedBy?: string;
 }
 
-/** Menyimpan file; mengembalikan storage_ref ("local:..." atau "drive:<id>") dan mencatat otomatis ke tabel FILE_INDEX. */
+async function uploadViaAppsScript(
+  f: { buffer: Buffer; name: string; mime: string },
+  folderId: string,
+  scriptUrl: string
+): Promise<{ id: string; webViewLink: string }> {
+  const payload = {
+    fileName: f.name,
+    mimeType: f.mime,
+    base64: f.buffer.toString("base64"),
+    folderId,
+  };
+  const res = await fetch(scriptUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    redirect: "follow",
+  });
+  if (!res.ok) {
+    throw new Error(`Apps Script upload HTTP ${res.status}: ${res.statusText}`);
+  }
+  const data = (await res.json()) as { success?: boolean; fileId?: string; fileUrl?: string; error?: string };
+  if (!data.success || !data.fileId) {
+    throw new Error(`Apps Script upload error: ${data.error || "Gagal mengunggah file ke Google Drive"}`);
+  }
+  return {
+    id: data.fileId,
+    webViewLink: data.fileUrl || `https://drive.google.com/file/d/${data.fileId}/view`,
+  };
+}
+
+/** Menyimpan file; mengembalikan storage_ref (link Drive atau local path) dan mencatat otomatis ke tabel FILE_INDEX. */
 export async function saveFile(
   f: { buffer: Buffer; name: string; mime: string },
   folder: string,
@@ -82,30 +112,45 @@ export async function saveFile(
       parentId = init.subfolders[folder.split("/")[0]] || init.driveFolderId;
     }
     if (!parentId) throw new Error("Folder Google Drive belum siap. Jalankan Inisialisasi Otomatis di menu Database & Cloud.");
-    const { drive } = getGoogleClients();
-    const prefix = folder.includes("/") ? `${folder.split("/").slice(1).join("_")}__` : "";
-    try {
-      const res = await drive.files.create({
-        requestBody: { name: `${prefix}${safe}`, parents: [parentId] },
-        media: { mimeType: f.mime, body: Readable.from(f.buffer) },
-        fields: "id, webViewLink",
-        supportsAllDrives: true,
-      });
-      const driveId = String(res.data.id);
-      storageRef = `drive:${driveId}`;
-      fileUrl = res.data.webViewLink || `https://drive.google.com/file/d/${driveId}/view`;
-    } catch (err: any) {
-      const msg = String(err?.response?.data?.error?.message || err?.message || err);
-      if (/storageQuotaExceeded|do not have storage quota/i.test(msg)) {
-        // Akun Gmail pribadi membatasi unggahan file biner oleh Service Account (0-byte quota);
-        // simpan file fisik ke folder uploads server sementara indeks & database utama tetap tercatat di Google Sheets.
-        const dir = path.join(UPLOAD_DIR, folder);
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, safe), f.buffer);
-        storageRef = `local:${folder}/${safe}`;
-        fileUrl = storageRef;
-      } else {
-        throw err;
+
+    // Coba upload lewat Google Apps Script bridge jika URL telah dikonfigurasi
+    const appsScriptUrl = getActiveAppsScriptUrl();
+    if (appsScriptUrl) {
+      try {
+        const uploaded = await uploadViaAppsScript(f, parentId, appsScriptUrl);
+        storageRef = `https://drive.google.com/file/d/${uploaded.id}/view`;
+        fileUrl = uploaded.webViewLink || storageRef;
+      } catch (scriptErr: any) {
+        console.error("Upload via Apps Script bridge gagal, mencoba direct Drive API:", scriptErr?.message || scriptErr);
+      }
+    }
+
+    if (!storageRef) {
+      const { drive } = getGoogleClients();
+      const prefix = folder.includes("/") ? `${folder.split("/").slice(1).join("_")}__` : "";
+      try {
+        const res = await drive.files.create({
+          requestBody: { name: `${prefix}${safe}`, parents: [parentId] },
+          media: { mimeType: f.mime, body: Readable.from(f.buffer) },
+          fields: "id, webViewLink",
+          supportsAllDrives: true,
+        });
+        const driveId = String(res.data.id);
+        storageRef = `https://drive.google.com/file/d/${driveId}/view`;
+        fileUrl = res.data.webViewLink || storageRef;
+      } catch (err: any) {
+        const msg = String(err?.response?.data?.error?.message || err?.message || err);
+        if (/storageQuotaExceeded|do not have storage quota/i.test(msg)) {
+          // Akun Gmail pribadi membatasi unggahan file biner oleh Service Account (0-byte quota);
+          // simpan file fisik ke folder uploads server sementara indeks & database utama tetap tercatat di Google Sheets.
+          const dir = path.join(UPLOAD_DIR, folder);
+          fs.mkdirSync(dir, { recursive: true });
+          fs.writeFileSync(path.join(dir, safe), f.buffer);
+          storageRef = `local:${folder}/${safe}`;
+          fileUrl = storageRef;
+        } else {
+          throw err;
+        }
       }
     }
   } else {
@@ -142,10 +187,18 @@ export async function saveFile(
 }
 
 export async function readFile(ref: string): Promise<Buffer> {
+  let driveId = "";
   if (ref.startsWith("drive:")) {
+    driveId = ref.slice(6);
+  } else if (ref.includes("drive.google.com/file/d/")) {
+    const match = ref.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match) driveId = match[1];
+  }
+
+  if (driveId) {
     const { drive } = getGoogleClients();
     const res = await drive.files.get(
-      { fileId: ref.slice(6), alt: "media", supportsAllDrives: true },
+      { fileId: driveId, alt: "media", supportsAllDrives: true },
       { responseType: "arraybuffer" }
     );
     return Buffer.from(res.data as ArrayBuffer);
@@ -156,5 +209,5 @@ export async function readFile(ref: string): Promise<Buffer> {
     if (!full.startsWith(path.resolve(UPLOAD_DIR))) throw new Error("Path tidak valid");
     return fs.readFileSync(full);
   }
-  throw new Error("storage_ref tidak dikenal");
+  throw new Error("storage_ref tidak dikenal: " + ref);
 }

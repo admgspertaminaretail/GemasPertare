@@ -28,6 +28,7 @@ export interface CloudConfig {
   shareEmail?: string;
   subfolders?: Record<string, string>;
   initializedAt?: string;
+  appsScriptUrl?: string;
 }
 
 /** Membaca konfigurasi cloud yang tersimpan di data/cloud-config.json. */
@@ -50,6 +51,7 @@ export function saveCloudConfig(patch: Partial<CloudConfig>): CloudConfig {
   if (next.fileDriver) process.env.FILE_DRIVER = next.fileDriver;
   if (next.sheetsId !== undefined) process.env.GOOGLE_SHEETS_ID = next.sheetsId;
   if (next.driveFolderId !== undefined) process.env.GOOGLE_DRIVE_FOLDER_ID = next.driveFolderId;
+  if (next.appsScriptUrl !== undefined) process.env.GOOGLE_APPS_SCRIPT_URL = next.appsScriptUrl;
 
   if (!process.env.VERCEL) {
     try {
@@ -60,6 +62,7 @@ export function saveCloudConfig(patch: Partial<CloudConfig>): CloudConfig {
         FILE_DRIVER: next.fileDriver,
         GOOGLE_SHEETS_ID: next.sheetsId,
         GOOGLE_DRIVE_FOLDER_ID: next.driveFolderId,
+        GOOGLE_APPS_SCRIPT_URL: next.appsScriptUrl,
       };
       for (const [k, v] of Object.entries(updates)) {
         if (v === undefined) continue;
@@ -94,6 +97,11 @@ export function getActiveDriveFolderId(category?: string): string {
     if (cfg.subfolders[top]) return cfg.subfolders[top];
   }
   return cfg.driveFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID || "";
+}
+
+export function getActiveAppsScriptUrl(): string {
+  const cfg = readCloudConfig();
+  return (cfg.appsScriptUrl || process.env.GOOGLE_APPS_SCRIPT_URL || "").trim();
 }
 
 /** Mengekstrak ID dari URL Google Drive / Google Sheets maupun ID mentah. */
