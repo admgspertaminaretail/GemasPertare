@@ -15,3 +15,15 @@ export const fmtSize = (n: string | number) => {
   return b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
 };
 export const todayStr = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+
+const MONTHS_ID = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+export const fmtPeriod = (ym?: string) => {
+  if (!ym) return "-";
+  const m = /^(\d{4})-(\d{2})$/.exec(ym);
+  if (!m) return ym;
+  return `${MONTHS_ID[Number(m[2]) - 1] || m[2]} ${m[1]}`;
+};

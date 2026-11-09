@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Download, FileSpreadsheet, Loader2, Send } from "lucide-react";
+import { Calendar, Download, Eye, FileSpreadsheet, Loader2, Send } from "lucide-react";
 import type { IbosExtractItem } from "@/lib/services/ibos";
 import { FileField } from "../ui/FileField";
 import { ConfirmModal } from "../ui/Modal";
 import { MonthlyIbosModal } from "./MonthlyIbosModal";
 import { useToast } from "../ui/Toast";
 import { api } from "@/lib/client";
-import { todayStr } from "@/lib/format";
+import { fmtPeriod, fmtSize, todayStr } from "@/lib/format";
 
 export function NewSubmissionForm({
   spbuName,
@@ -37,6 +37,7 @@ export function NewSubmissionForm({
   const [confirm, setConfirm] = useState(false);
   const [openIbos, setOpenIbos] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const latestIbos = ibosItems[0] || null;
 
   const done = [excel.length > 0, arsipPdf.length > 0, photos.length > 0];
   const validDesc = desc.trim().length >= 5;
@@ -188,25 +189,59 @@ export function NewSubmissionForm({
           {!ready && <p className="mt-2 text-center text-xs text-slate-500">Keterangan dan ketiga dokumen wajib harus lengkap.</p>}
         </div>
 
-        {/* Shortcut khusus: Data Arsip Per Bulan + Template Daftar Arsip (tanpa FUPA & tanpa menu tambahan) */}
-        <div className="card space-y-3 p-5">
-          <h3 className="text-sm font-bold text-navy">Shortcut Data Arsip</h3>
+        {/* Shortcut khusus: Download Langsung Data Tarikan i-BOS Bulanan & Template Daftar Arsip */}
+        <div className="card space-y-3 p-5 border border-slate-200/80 bg-white">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-navy">Data Arsip Acuan</h3>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+              Update Back Office
+            </span>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setOpenIbos(true)}
-            className="flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand-700 p-3.5 text-left text-white shadow-card transition hover:opacity-95"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
-              <Calendar className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-bold">Data Arsip Per Bulan</div>
-              <div className="text-[11px] text-white/80">
-                Unduh data tarikan i-BOS bulanan ({ibosItems.length} berkas)
+          {latestIbos ? (
+            <div className="space-y-1.5">
+              <a
+                href={`/api/files/ibos/${latestIbos.extract_id}?download=1`}
+                className="group flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand-700 p-3.5 text-left text-white shadow-card transition hover:opacity-95"
+                title={`Unduh ${latestIbos.file_name} (${latestIbos.title})`}
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <Download className="h-5 w-5 transition group-hover:translate-y-0.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-xs font-black uppercase tracking-wide">
+                      Data Tarikan i-BOS
+                    </span>
+                    <span className="rounded-full bg-amber-300 px-2 py-0.2 text-[10px] font-black text-navy">
+                      {fmtPeriod(latestIbos.period)}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 truncate text-xs font-bold text-white">
+                    Download File Bulan Ini (.xlsx)
+                  </div>
+                  <div className="text-[11px] text-white/75">
+                    {fmtSize(latestIbos.size)} · Klik langsung unduh
+                  </div>
+                </div>
+              </a>
+              <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
+                <span>Diperbarui otomatis oleh Admin GS</span>
+                <button
+                  type="button"
+                  onClick={() => setOpenIbos(true)}
+                  className="font-bold text-brand hover:underline inline-flex items-center gap-1"
+                >
+                  <Eye className="h-3 w-3" />
+                  Preview Isi
+                </button>
               </div>
             </div>
-          </button>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-200 p-3 text-center text-xs text-slate-400">
+              Belum ada data tarikan i-BOS dari Back Office.
+            </div>
+          )}
 
           {daftarArsipTemplate && (
             <a

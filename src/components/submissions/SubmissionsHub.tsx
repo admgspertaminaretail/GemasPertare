@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, Calendar, CalendarCheck, ChevronDown, ChevronUp, Download, FileSpreadsheet, Layers, Loader2, Send } from "lucide-react";
+import { Ban, Calendar, CalendarCheck, ChevronDown, ChevronUp, Download, Eye, FileSpreadsheet, Layers, Loader2, Send } from "lucide-react";
 import type { IbosExtractItem } from "@/lib/services/ibos";
 import { SubmissionTable } from "./SubmissionTable";
 import { MonthlyIbosModal } from "./MonthlyIbosModal";
@@ -11,7 +11,7 @@ import { Empty, StatusBadge } from "../ui/kit";
 import { ConfirmModal, Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
 import { api } from "@/lib/client";
-import { fmtDate, todayStr } from "@/lib/format";
+import { fmtDate, fmtPeriod, todayStr } from "@/lib/format";
 import { FORWARD } from "@/lib/constants";
 
 type R = Record<string, any>;
@@ -40,6 +40,7 @@ export function SubmissionsHub({
 }) {
   const [tab, setTab] = useState(initial);
   const [openIbos, setOpenIbos] = useState(false);
+  const latestIbos = ibosItems[0] || null;
   useEffect(() => { setTab(initial); }, [initial]);
   const isRegion = role === "ADMIN_REGION";
   const tabs = role === "ADMIN_SPBU" ? [] : [
@@ -62,27 +63,55 @@ export function SubmissionsHub({
 
       {tab === "pengajuan" && (
         <>
-          <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-prtgreen p-4">
+          <div className="card flex flex-wrap items-center justify-between gap-3 border-l-4 border-l-brand p-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-prtgreen ring-1 ring-emerald-200">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand ring-1 ring-blue-100">
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-sm font-bold text-navy">Shortcut Data Arsip Per Bulan &amp; Daftar Arsip</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-navy">Data Arsip Tarikan i-BOS</span>
+                  {latestIbos && (
+                    <span className="rounded-full bg-softblue px-2.5 py-0.5 text-[10px] font-bold text-brand ring-1 ring-blue-200">
+                      Periode {fmtPeriod(latestIbos.period)}
+                    </span>
+                  )}
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                    Update Back Office
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500">
-                  Unduh <b>Data Arsip Per Bulan</b> dari Admin GS lalu susun ke dalam <b>Template Daftar Arsip Usul Musnah</b>.
+                  Data acuan bulanan resmi dari Admin GS. Klik unduh langsung untuk acuan menyusun <b>Template Daftar Arsip Usul Musnah</b>.
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setOpenIbos(true)}
-                className="btn-primary btn-sm"
-              >
-                <Calendar className="h-4 w-4" />
-                Data Arsip Per Bulan ({ibosItems.length})
-              </button>
+              {latestIbos ? (
+                <>
+                  <a
+                    href={`/api/files/ibos/${latestIbos.extract_id}?download=1`}
+                    className="btn-primary btn-sm flex items-center gap-1.5 shadow-sm"
+                    title={`Unduh ${latestIbos.file_name} (${latestIbos.title})`}
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Tarikan i-BOS ({fmtPeriod(latestIbos.period)})
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setOpenIbos(true)}
+                    className="btn-ghost btn-sm ring-1 ring-slate-200"
+                    title="Tinjau isi data sebelum unduh"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </button>
+                </>
+              ) : (
+                <button type="button" disabled className="btn-ghost btn-sm opacity-50">
+                  <Download className="h-4 w-4" />
+                  Tarikan i-BOS Belum Tersedia
+                </button>
+              )}
               {daftarArsipTemplate && (
                 <a
                   href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}

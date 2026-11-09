@@ -239,7 +239,17 @@ export async function GET(req: Request, { params }: { params: { kind: string; id
       docMetaRaw = f.meta || "";
       rowRecord = f;
     } else if (params.kind === "ibos") {
-      const f = (await store.list("IBOS_EXTRACTS")).find((r) => r.extract_id === params.id);
+      const allIbos = await store.list("IBOS_EXTRACTS");
+      const f =
+        params.id === "latest"
+          ? allIbos
+              .filter((r) => canAccessIbosRow(u, r) && (r.status || "Aktif") === "Aktif")
+              .sort(
+                (a, b) =>
+                  (b.period || "").localeCompare(a.period || "") ||
+                  (b.uploaded_at || "").localeCompare(a.uploaded_at || "")
+              )[0]
+          : allIbos.find((r) => r.extract_id === params.id);
       if (!f) throw new HttpError(404, "Data tarikan i-BOS tidak ditemukan.");
       if (!canAccessIbosRow(u, f)) {
         throw new HttpError(403, "Anda tidak memiliki akses ke berkas Data Tarikan i-BOS ini.");
