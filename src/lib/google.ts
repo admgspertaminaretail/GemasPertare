@@ -243,8 +243,6 @@ export function getGoogleClients() {
   const auth = new google.auth.JWT({
     email: cred.email,
     key: cred.privateKey,
-    email: cred.email,
-    key: cred.privateKey,
     scopes: [
       "https://www.googleapis.com/auth/drive",
       "https://www.googleapis.com/auth/spreadsheets",
