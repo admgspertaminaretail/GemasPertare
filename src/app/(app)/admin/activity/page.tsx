@@ -9,11 +9,11 @@ export const dynamic = "force-dynamic";
 
 export default async function ActivityPage() {
   const u = await getSession();
-  if (!u || (u.role !== "ADMIN_PAM" && u.role !== "ADMIN_REGION")) redirect("/dashboard");
+  if (!u || u.role !== "ADMIN_PAM") redirect("/dashboard");
   const logs = await listActivity(u);
   return (
     <>
-      <PageHeader icon={<ScrollText className="h-6 w-6" />} title="Riwayat & Audit Trail" subtitle={u.role === "ADMIN_PAM" ? "Seluruh aktivitas sistem (2.000 terbaru)." : "Aktivitas pengguna dalam Region Anda."} />
+      <PageHeader icon={<ScrollText className="h-6 w-6" />} title="Riwayat & Audit Trail" subtitle="Seluruh aktivitas sistem (2.000 terbaru)." />
       <ActivityView logs={logs} />
     </>
   );

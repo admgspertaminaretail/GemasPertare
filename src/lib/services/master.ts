@@ -225,13 +225,8 @@ export async function updateOwnProfile(
 
 /* ------------------------------------------------------------- audit trail */
 export async function listActivity(u: SessionUser) {
-  if (u.role === "ADMIN_SPBU") throw new HttpError(403, "Tidak memiliki akses audit trail.");
+  if (u.role !== "ADMIN_PAM") throw new HttpError(403, "Akses audit trail khusus untuk Admin GS / PAM.");
   const store = await getStore();
-  let logs = await store.list("ACTIVITY_LOGS");
-  if (u.role === "ADMIN_REGION") {
-    const users = await store.list("USERS");
-    const mine = new Set(users.filter((x) => x.region_id === u.regionId).map((x) => x.user_id));
-    logs = logs.filter((l) => mine.has(l.user_id));
-  }
+  const logs = await store.list("ACTIVITY_LOGS");
   return logs.sort((a, b) => b.timestamp.localeCompare(a.timestamp)).slice(0, 2000);
 }

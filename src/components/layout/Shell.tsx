@@ -57,29 +57,29 @@ interface NavItem {
   roles?: string[];
 }
 
-// Navigasi lengkap untuk akun selain SPBU (ADMIN_PAM & ADMIN_REGION): tetap persis seperti semula
+// Navigasi lengkap untuk Admin GS / PAM
 const GENERAL_NAV: NavItem[] = [
   { href: "/home", label: "Beranda", icon: Home },
   { href: "/dashboard", label: "Dashboard Monitoring", icon: LayoutDashboard },
   { href: "/detail-monitoring", label: "Rincian Data Monitoring", icon: ClipboardList },
   { href: "/kronologis-pengajuan", label: "Kronologis ID Pengajuan", icon: ListOrdered },
   { href: "/info", label: "Pusat Informasi Arsip", icon: BookOpen },
-  { href: "/tarikan-ibos", label: "Data Arsip Tarikan i-BOS", icon: FileSpreadsheet },
+  { href: "/tarikan-ibos", label: "Data Arsip Tarikan i-BOS", icon: FileSpreadsheet, roles: ["ADMIN_PAM"] },
   { href: "/templates", label: "Pusat Template", icon: FileDown },
   { href: "/submissions", label: "Pengajuan Usul Musnah Arsip", icon: FilePlus2 },
-  { href: "/ask", label: "Tanya si GEMAS", icon: Bot },
 ];
 
-interface SpbuNavItem {
+interface StructuredNavItem {
   href: string;
   label: string;
   sublabel: string;
   icon: any;
   badge?: string;
 }
+type SpbuNavItem = StructuredNavItem;
 
 // Khusus Admin SPBU: layout dirancang terstruktur dan profesional sesuai peran operasional
-const SPBU_PRIMARY_NAV: SpbuNavItem[] = [
+const SPBU_PRIMARY_NAV: StructuredNavItem[] = [
   {
     href: "/home",
     label: "Beranda",
@@ -101,7 +101,7 @@ const SPBU_PRIMARY_NAV: SpbuNavItem[] = [
   },
 ];
 
-const SPBU_SECONDARY_NAV: SpbuNavItem[] = [
+const SPBU_SECONDARY_NAV: StructuredNavItem[] = [
   {
     href: "/detail-monitoring",
     label: "Rincian Data Monitoring",
@@ -116,12 +116,63 @@ const SPBU_SECONDARY_NAV: SpbuNavItem[] = [
   },
 ];
 
-// Sekat Administrasi
+// Khusus PIC Region: layout terstruktur sesuai peran verifikasi, pooling & monitoring regional
+const REGION_PRIMARY_NAV: StructuredNavItem[] = [
+  {
+    href: "/home",
+    label: "Beranda",
+    sublabel: "Ringkasan & galeri informasi",
+    icon: Home,
+  },
+  {
+    href: "/dashboard",
+    label: "Dashboard Monitoring",
+    sublabel: "Monitoring capaian 7 Region",
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/submissions",
+    label: "Pengajuan Usul Musnah",
+    sublabel: "Review, Pooling FUPA & MEMO",
+    icon: FilePlus2,
+    badge: "Review",
+  },
+  {
+    href: "/info",
+    label: "Pusat Informasi Arsip",
+    sublabel: "Pedoman, JRDP & Sprint",
+    icon: BookOpen,
+  },
+];
+
+// Sekat khusus PIC Region: rincian monitoring, kronologis id, pusat template
+const REGION_SECONDARY_NAV: StructuredNavItem[] = [
+  {
+    href: "/detail-monitoring",
+    label: "Rincian Data Monitoring",
+    sublabel: "Tabel status berkas SPBU",
+    icon: ClipboardList,
+  },
+  {
+    href: "/kronologis-pengajuan",
+    label: "Kronologis ID Pengajuan",
+    sublabel: "Buku catatan & riwayat ID",
+    icon: ListOrdered,
+  },
+  {
+    href: "/templates",
+    label: "Pusat Template",
+    sublabel: "Unduh formulir & format resmi",
+    icon: FileDown,
+  },
+];
+
+// Sekat Administrasi (Khusus Admin PAM)
 const ADMIN_NAV: NavItem[] = [
   { href: "/admin/master", label: "Master Data", icon: Database, roles: ["ADMIN_PAM"] },
   { href: "/admin/users", label: "Pengguna", icon: Users, roles: ["ADMIN_PAM"] },
   { href: "/admin/database", label: "Database & Cloud", icon: Cloud, roles: ["ADMIN_PAM"] },
-  { href: "/admin/activity", label: "Audit Trail", icon: ScrollText, roles: ["ADMIN_PAM", "ADMIN_REGION"] },
+  { href: "/admin/activity", label: "Audit Trail", icon: ScrollText, roles: ["ADMIN_PAM"] },
 ];
 
 function BrandLogo() {
@@ -195,9 +246,12 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
   const filterRole = (arr: NavItem[]) => arr.filter((n) => !n.roles || n.roles.includes(user.role));
 
   const isSpbu = user.role === "ADMIN_SPBU";
+  const isRegion = user.role === "ADMIN_REGION";
   const generalItems = filterRole(GENERAL_NAV);
   const spbuPrimaryItems = SPBU_PRIMARY_NAV;
   const spbuSecondaryItems = SPBU_SECONDARY_NAV;
+  const regionPrimaryItems = REGION_PRIMARY_NAV;
+  const regionSecondaryItems = REGION_SECONDARY_NAV;
   const adminItems = filterRole(ADMIN_NAV);
   const askActive = active("/ask");
 
@@ -219,7 +273,7 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
     );
   };
 
-  const renderSpbuLink = (n: SpbuNavItem, compact: boolean) => {
+  const renderStructuredLink = (n: StructuredNavItem, compact: boolean) => {
     const I = n.icon;
     const isActive = active(n.href);
     if (compact) {
@@ -327,7 +381,7 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
               </div>
             )}
             <div className="space-y-1">
-              {spbuPrimaryItems.map((n) => renderSpbuLink(n, compact))}
+              {spbuPrimaryItems.map((n) => renderStructuredLink(n, compact))}
             </div>
 
             {/* Bagian 2 Khusus SPBU: Monitoring & Riwayat (Sekat Terstruktur) */}
@@ -340,12 +394,72 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
               )}
             </div>
             <div className="space-y-1">
-              {spbuSecondaryItems.map((n) => renderSpbuLink(n, compact))}
+              {spbuSecondaryItems.map((n) => renderStructuredLink(n, compact))}
+            </div>
+          </>
+        ) : isRegion ? (
+          <>
+            {/* PIC Region Operational Badge */}
+            {!compact && (
+              <div className="mx-1 mb-2.5 rounded-2xl bg-white/[0.06] border border-white/10 p-2.5 text-left shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-sky-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.9)] animate-pulse" />
+                    PIC Region
+                  </span>
+                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300">
+                    {user.username}
+                  </span>
+                </div>
+                <div className="mt-1 truncate text-xs font-bold text-white" title={user.unit}>
+                  {user.unit}
+                </div>
+              </div>
+            )}
+
+            {/* Bagian 1 Khusus Region: Menu Utama Operasional */}
+            {!compact && (
+              <div className="mx-2 mb-1 mt-0.5 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400/80">
+                <span>Menu Utama</span>
+                <span className="text-[9px] font-semibold text-slate-500">4 Menu</span>
+              </div>
+            )}
+            <div className="space-y-1">
+              {regionPrimaryItems.map((n) => renderStructuredLink(n, compact))}
+            </div>
+
+            {/* Bagian 2 Khusus Region: Sekat (rincian monitoring, kronologis id, pusat template) */}
+            <div className={`my-3 border-t border-white/10 ${compact ? "mx-1" : "mx-2 pt-2.5"}`}>
+              {!compact && (
+                <div className="mb-1.5 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400/80">
+                  <span>Monitoring &amp; Template</span>
+                  <span className="text-[9px] font-semibold text-slate-500">3 Menu</span>
+                </div>
+              )}
+            </div>
+            <div className="space-y-1">
+              {regionSecondaryItems.map((n) => renderStructuredLink(n, compact))}
             </div>
           </>
         ) : (
           <>
-            {/* Menu Asli Lengkap untuk Akun Lain (Admin PAM & PIC Region) */}
+            {/* Menu Admin PAM */}
+            {!compact && (
+              <div className="mx-1 mb-2.5 rounded-2xl bg-white/[0.06] border border-white/10 p-2.5 text-left shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse" />
+                    Admin GS / PAM
+                  </span>
+                  <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300">
+                    {user.username}
+                  </span>
+                </div>
+                <div className="mt-1 truncate text-xs font-bold text-white" title={user.unit}>
+                  {user.unit}
+                </div>
+              </div>
+            )}
             {generalItems.map((n) => renderLink(n, compact))}
 
             {/* Sekat Administrasi */}
@@ -365,93 +479,93 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
         )}
       </nav>
 
-      {/* Paling Bawah: Asisten Kearsipan Copilot (Desain Profesional untuk SPBU) */}
-      {isSpbu && (
-        <div className="border-t border-white/10 p-3">
-          {compact ? (
-            <Link
-              href="/ask"
-              title="Tanya si GEMAS (Asisten Kearsipan AI)"
-              className={`relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
-                askActive
-                  ? "bg-white text-navy shadow-lg ring-2 ring-brand"
-                  : "bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10"
-              }`}
-            >
-              <div className="relative">
-                <Mascot size={32} />
-                <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-navy" />
+      {/* Paling Bawah: Asisten Kearsipan Copilot (Tanya si GEMAS) di Kiri Bawah untuk Semua Role */}
+      <div className="border-t border-white/10 p-3">
+        {compact ? (
+          <Link
+            href="/ask"
+            title="Tanya si GEMAS (Asisten Kearsipan AI)"
+            className={`relative mx-auto flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${
+              askActive
+                ? "bg-white text-navy shadow-lg ring-2 ring-brand"
+                : "bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/10"
+            }`}
+          >
+            <div className="relative">
+              <Mascot size={32} />
+              <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-navy" />
+            </div>
+          </Link>
+        ) : (
+          <Link
+            href="/ask"
+            className={`group block rounded-2xl border p-3 transition-all duration-200 ${
+              askActive
+                ? "bg-white text-navy border-white shadow-lg ring-2 ring-brand/30"
+                : "bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-white/10 hover:border-white/20 hover:bg-white/[0.12] text-white"
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl p-0.5 shadow-sm transition group-hover:scale-105 ${
+                  askActive ? "bg-brand/10 ring-1 ring-brand/20" : "bg-white/95"
+                }`}
+              >
+                <Mascot size={34} />
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-navy" />
+                </span>
               </div>
-            </Link>
-          ) : (
-            <Link
-              href="/ask"
-              className={`group block rounded-2xl border p-3 transition-all duration-200 ${
-                askActive
-                  ? "bg-white text-navy border-white shadow-lg ring-2 ring-brand/30"
-                  : "bg-gradient-to-b from-white/[0.08] to-white/[0.03] border-white/10 hover:border-white/20 hover:bg-white/[0.12] text-white"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <div
-                  className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl p-0.5 shadow-sm transition group-hover:scale-105 ${
-                    askActive ? "bg-brand/10 ring-1 ring-brand/20" : "bg-white/95"
-                  }`}
-                >
-                  <Mascot size={34} />
-                  <span className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-navy" />
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider ${
-                        askActive ? "text-brand" : "text-amber-300"
-                      }`}
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      Asisten Kearsipan
-                    </span>
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
-                        askActive ? "bg-brand/10 text-brand" : "bg-white/15 text-white/80"
-                      }`}
-                    >
-                      AI
-                    </span>
-                  </div>
-                  <div
-                    className={`truncate text-xs font-bold leading-tight mt-0.5 ${
-                      askActive ? "text-navy" : "text-white"
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider ${
+                      askActive ? "text-brand" : "text-amber-300"
                     }`}
                   >
-                    Tanya si GEMAS
-                  </div>
+                    <Sparkles className="h-3 w-3" />
+                    Asisten Kearsipan
+                  </span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${
+                      askActive ? "bg-brand/10 text-brand" : "bg-white/15 text-white/80"
+                    }`}
+                  >
+                    AI
+                  </span>
+                </div>
+                <div
+                  className={`truncate text-xs font-bold leading-tight mt-0.5 ${
+                    askActive ? "text-navy" : "text-white"
+                  }`}
+                >
+                  Tanya si GEMAS
                 </div>
               </div>
-              <p
-                className={`mt-2 text-[10.5px] leading-relaxed line-clamp-2 ${
-                  askActive ? "text-slate-600" : "text-slate-300/80"
-                }`}
-              >
-                Konsultasi masa retensi JRDP, syarat berkas, &amp; alur usul musnah SPBU.
-              </p>
-              <div
-                className={`mt-2.5 flex items-center justify-between border-t pt-2 text-[10.5px] font-bold transition ${
-                  askActive
-                    ? "border-slate-100 text-brand"
-                    : "border-white/10 text-white/90 group-hover:text-white"
-                }`}
-              >
-                <span>Buka Konsultasi</span>
-                <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
-              </div>
-            </Link>
-          )}
-        </div>
-      )}
+            </div>
+            <p
+              className={`mt-2 text-[10.5px] leading-relaxed line-clamp-2 ${
+                askActive ? "text-slate-600" : "text-slate-300/80"
+              }`}
+            >
+              {isSpbu
+                ? "Konsultasi masa retensi JRDP, syarat berkas, & alur usul musnah SPBU."
+                : "Konsultasi pedoman JRDP, verifikasi berkas, & regulasi kearsipan."}
+            </p>
+            <div
+              className={`mt-2.5 flex items-center justify-between border-t pt-2 text-[10.5px] font-bold transition ${
+                askActive
+                  ? "border-slate-100 text-brand"
+                  : "border-white/10 text-white/90 group-hover:text-white"
+              }`}
+            >
+              <span>Buka Konsultasi</span>
+              <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
+            </div>
+          </Link>
+        )}
+      </div>
     </div>
   );
 

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TarikanIbosPage() {
   const u = await requireUser();
-  if (u.role === "ADMIN_SPBU") redirect("/submissions");
+  if (u.role !== "ADMIN_PAM") redirect(u.role === "ADMIN_SPBU" ? "/submissions" : "/dashboard");
   const data = await listIbosExtracts(u);
   const canManage = u.role === "ADMIN_PAM";
 
