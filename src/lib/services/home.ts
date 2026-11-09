@@ -352,8 +352,78 @@ export async function getHomePageData(u: SessionUser) {
           .findIndex((r) => r.region_id === u.regionId)
       : -1;
 
+  // Nama region user (khusus PIC Region)
+  const userRegion = activeRegions.find((r) => r.region_id === u.regionId);
+  const userRegionName = userRegion ? userRegion.region_name : (u.regionId || "");
+
+  // KPI per region (untuk filter 7 Region di Beranda Admin PAM)
+  const regionKpis: Record<
+    string,
+    {
+      region_id: string;
+      region_name: string;
+      total: number;
+      review: number;
+      revision: number;
+      approved: number;
+      pooled: number;
+      memoed: number;
+      approvedOrBeyond: number;
+      totalSpbu: number;
+      spbuSubmitted: number;
+    }
+  > = {};
+
+  for (const r of activeRegions) {
+    const rSpbus = activeSpbus.filter((s) => s.region_id === r.region_id);
+    const rSubs = validSubs.filter((s) => s.region_id === r.region_id);
+    const review = rSubs.filter((s) => s.status === STATUS.REVIEW).length;
+    const revision = rSubs.filter((s) => s.status === STATUS.REVISION).length;
+    const approved = rSubs.filter((s) => s.status === STATUS.APPROVED).length;
+    const pooled = rSubs.filter((s) => s.status === STATUS.POOLED).length;
+    const memoed = rSubs.filter((s) => s.status === STATUS.MEMOED).length;
+    const spbuSubmitted = new Set(rSubs.map((s) => s.spbu_id)).size;
+    regionKpis[r.region_id] = {
+      region_id: r.region_id,
+      region_name: r.region_name,
+      total: rSubs.length,
+      review,
+      revision,
+      approved,
+      pooled,
+      memoed,
+      approvedOrBeyond: approved + pooled + memoed,
+      totalSpbu: rSpbus.length,
+      spbuSubmitted,
+    };
+  }
+
+  // Ringkasan nasional untuk opsi "Semua Region (Nasional)" di PAM
+  regionKpis["ALL"] = {
+    region_id: "ALL",
+    region_name: "Semua Region (Nasional)",
+    total: validSubs.length,
+    review: validSubs.filter((s) => s.status === STATUS.REVIEW).length,
+    revision: validSubs.filter((s) => s.status === STATUS.REVISION).length,
+    approved: validSubs.filter((s) => s.status === STATUS.APPROVED).length,
+    pooled: validSubs.filter((s) => s.status === STATUS.POOLED).length,
+    memoed: validSubs.filter((s) => s.status === STATUS.MEMOED).length,
+    approvedOrBeyond: validSubs.filter((s) =>
+      [STATUS.APPROVED, STATUS.POOLED, STATUS.MEMOED].includes(s.status as any)
+    ).length,
+    totalSpbu: activeSpbus.length,
+    spbuSubmitted: new Set(validSubs.map((s) => s.spbu_id)).size,
+  };
+
+  const regionsSummary = activeRegions.map((r) => ({
+    region_id: r.region_id,
+    region_name: r.region_name,
+    short_name: r.region_name.replace(/^Region\s+/i, "Reg "),
+  }));
+
   return {
     greetingName,
+    userRegionName,
     slides,
     kpi: scopedDash.kpi,
     scope: scopedDash.scope,
@@ -363,5 +433,7 @@ export async function getHomePageData(u: SessionUser) {
     topSpbus,
     mySpbuRank: mySpbuRankIndex >= 0 ? mySpbuRankIndex + 1 : null,
     myRegionRank: myRegionRankIndex >= 0 ? myRegionRankIndex + 1 : null,
+    regions: regionsSummary,
+    regionKpis,
   };
 }

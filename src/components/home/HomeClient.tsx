@@ -21,11 +21,15 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
   Clock,
   Crown,
+  FilePlus2,
   FileStack,
+  Filter,
   Flame,
   Image as ImageIcon,
+  LayoutDashboard,
   Loader2,
   Medal,
   MessageSquare,
@@ -103,6 +107,7 @@ export function HomeClient({
   role,
   userDisplayName,
   greetingName,
+  userRegionName = "",
   isDemo,
   slides,
   kpi,
@@ -113,10 +118,13 @@ export function HomeClient({
   topSpbus,
   mySpbuRank,
   myRegionRank,
+  regions = [],
+  regionKpis = {},
 }: {
   role: RoleId;
   userDisplayName: string;
   greetingName: string;
+  userRegionName?: string;
   isDemo: boolean;
   slides: HomeSlideItem[];
   kpi: any;
@@ -127,10 +135,15 @@ export function HomeClient({
   topSpbus: SpbuRankItem[];
   mySpbuRank: number | null;
   myRegionRank: number | null;
+  regions?: { region_id: string; region_name: string; short_name: string }[];
+  regionKpis?: Record<string, any>;
 }) {
   const router = useRouter();
   const toast = useToast();
   const canManageSlides = role === "ADMIN_PAM";
+
+  // Filter 7 Region khusus Admin PAM / Head Office ("ALL" = Semua Region / Nasional)
+  const [pamRegionFilter, setPamRegionFilter] = useState<string>("ALL");
 
   const activeSlides = slides.filter((s) => s.status === "Aktif");
   const displaySlides = activeSlides.length > 0 ? activeSlides : slides;
@@ -260,16 +273,71 @@ export function HomeClient({
           ? { text: `${kpi.approved} pengajuan disetujui dan siap masuk Pooling FUPA.`, href: "/submissions?tab=pooling", icon: Clock, cls: "bg-blue-50 text-brand ring-blue-200" }
           : null;
 
+  const activeKpi =
+    role === "ADMIN_PAM" && regionKpis?.[pamRegionFilter]
+      ? regionKpis[pamRegionFilter]
+      : kpi;
+
+  const activeRegionName =
+    pamRegionFilter === "ALL"
+      ? "Semua Region (Nasional)"
+      : regions.find((r) => r.region_id === pamRegionFilter)?.region_name || pamRegionFilter;
+
   // Data Progress Pengajuan (pengganti Dashboard Monitoring)
-  const totalScoped = kpi.total || 0;
+  const totalScoped = activeKpi?.total || 0;
   const stages = [
-    { label: "Menunggu Review", count: kpi.review || 0, color: "bg-amber-400", text: "text-amber-700", bg: "bg-amber-50", view: "review", status: STATUS.REVIEW },
-    { label: "Perlu Revisi", count: kpi.revision || 0, color: "bg-prtred", text: "text-prtred", bg: "bg-red-50", view: "revision", status: STATUS.REVISION },
-    { label: "Disetujui Region", count: kpi.approved || 0, color: "bg-prtgreen", text: "text-emerald-700", bg: "bg-emerald-50", view: "approved", status: STATUS.APPROVED },
-    { label: "Sudah Pooling", count: kpi.pooled || 0, color: "bg-brand", text: "text-brand", bg: "bg-softblue", view: "pooled", status: STATUS.POOLED },
-    { label: "Sudah Di-Memo", count: kpi.memoed || 0, color: "bg-navy", text: "text-navy", bg: "bg-slate-100", view: "memoed", status: STATUS.MEMOED },
+    {
+      label: "Menunggu Review",
+      desc: "Menunggu verifikasi Region",
+      count: activeKpi?.review || 0,
+      color: "bg-amber-400",
+      text: "text-amber-700",
+      bg: "bg-amber-50",
+      view: "review",
+      status: STATUS.REVIEW,
+    },
+    {
+      label: "Perlu Revisi",
+      desc: "Dikembalikan untuk diperbaiki",
+      count: activeKpi?.revision || 0,
+      color: "bg-prtred",
+      text: "text-prtred",
+      bg: "bg-red-50",
+      view: "revision",
+      status: STATUS.REVISION,
+    },
+    {
+      label: "Disetujui Region",
+      desc: "Lolos verifikasi, siap pooling",
+      count: activeKpi?.approved || 0,
+      color: "bg-prtgreen",
+      text: "text-emerald-700",
+      bg: "bg-emerald-50",
+      view: "approved",
+      status: STATUS.APPROVED,
+    },
+    {
+      label: "Pooling",
+      desc: "Penggabungan ke FUPA",
+      count: activeKpi?.pooled || 0,
+      color: "bg-brand",
+      text: "text-brand",
+      bg: "bg-softblue",
+      view: "pooled",
+      status: STATUS.POOLED,
+    },
+    {
+      label: "Sudah Di-Memo",
+      desc: "MEMO resmi diteruskan ke PAM",
+      count: activeKpi?.memoed || 0,
+      color: "bg-navy",
+      text: "text-navy",
+      bg: "bg-slate-100",
+      view: "memoed",
+      status: STATUS.MEMOED,
+    },
   ];
-  const progressedPct = totalScoped > 0 ? Math.round(((kpi.approvedOrBeyond || 0) / totalScoped) * 100) : 0;
+  const progressedPct = totalScoped > 0 ? Math.round(((activeKpi?.approvedOrBeyond || 0) / totalScoped) * 100) : 0;
 
   const regionChartData = regionStats.map((r) => ({
     ...r,
@@ -290,7 +358,11 @@ export function HomeClient({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 px-6 py-4 sm:px-8">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="chip bg-white/15 text-white ring-white/25">{ROLE_LABEL[role]}</span>
+              <span className="chip bg-white/15 text-white ring-white/25">
+                {role === "ADMIN_REGION" && userRegionName
+                  ? `${ROLE_LABEL[role]} — ${userRegionName}`
+                  : ROLE_LABEL[role]}
+              </span>
               {isDemo && <DemoTag />}
               {!greetingName && (
                 <span className="text-[11px] text-amber-200">
@@ -311,6 +383,12 @@ export function HomeClient({
               <Link href="/submissions/new" className="btn bg-prtred text-white shadow-card hover:bg-red-700">
                 <Plus className="h-4 w-4" />
                 Buat Pengajuan Usul Musnah
+              </Link>
+            )}
+            {role === "ADMIN_REGION" && (
+              <Link href="/submissions" className="btn bg-white text-navy shadow-card hover:bg-slate-100">
+                <CheckCircle2 className="h-4 w-4 text-brand" />
+                Review Pengajuan SPBU
               </Link>
             )}
             {canManageSlides && (
@@ -424,21 +502,86 @@ export function HomeClient({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-base font-extrabold text-navy sm:text-lg">
-              Progres Pengajuan Usul Musnah {scope === "SPBU" ? "SPBU Anda" : scope === "REGION" ? "Region Anda" : "Nasional"}
+              {role === "ADMIN_SPBU"
+                ? "Progres Pengajuan Usul Musnah SPBU Anda"
+                : role === "ADMIN_REGION"
+                  ? `Progres Pengajuan Usul Musnah SPBU ${userRegionName || "Region Anda"}`
+                  : "Progres Pengajuan Usul Musnah SPBU COCO"}
             </h2>
             <p className="text-xs text-slate-500">
-              Klik kartu atau tahapan progres untuk melihat tabel lengkap di Rincian Data Monitoring.
+              {role === "ADMIN_SPBU"
+                ? "Klik kartu atau tahapan progres untuk melihat tabel lengkap di Rincian Data Monitoring."
+                : role === "ADMIN_REGION"
+                  ? `Pantau proses pengajuan usul musnah dari seluruh SPBU di ${userRegionName || "Region Anda"}.`
+                  : pamRegionFilter === "ALL"
+                    ? "Pantau alur penyelesaian usul musnah arsip SPBU COCO dari 7 Region PT Pertamina Retail."
+                    : `Pantau alur penyelesaian usul musnah arsip SPBU COCO di wilayah ${activeRegionName}.`}
             </p>
           </div>
-          <Link href="/detail-monitoring?view=total" className="text-xs font-bold text-brand hover:underline">
+          <Link
+            href={
+              role === "ADMIN_PAM" && pamRegionFilter !== "ALL"
+                ? `/detail-monitoring?region=${pamRegionFilter}`
+                : "/detail-monitoring?view=total"
+            }
+            className="text-xs font-bold text-brand hover:underline"
+          >
             Buka Rincian Data Monitoring →
           </Link>
         </div>
 
+        {/* Filter 7 Region khusus Admin PAM / Head Office */}
+        {role === "ADMIN_PAM" && regions.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-softblue text-brand">
+                <Filter className="h-4 w-4" />
+              </span>
+              <div>
+                <span className="text-xs font-bold text-navy">Filter Wilayah Region:</span>
+                <span className="ml-1.5 text-[11px] text-slate-500">
+                  (Aktif: <b>{activeRegionName}</b>)
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPamRegionFilter("ALL")}
+                className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+                  pamRegionFilter === "ALL"
+                    ? "bg-navy text-white shadow-sm ring-2 ring-navy/20"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-navy"
+                }`}
+              >
+                Semua Region (Nasional)
+              </button>
+              {regions.map((r) => (
+                <button
+                  key={r.region_id}
+                  type="button"
+                  onClick={() => setPamRegionFilter(r.region_id)}
+                  className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition ${
+                    pamRegionFilter === r.region_id
+                      ? "bg-brand text-white shadow-sm ring-2 ring-brand/30"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-navy"
+                  }`}
+                >
+                  {r.short_name || r.region_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4 lg:grid-cols-[310px_1fr]">
           {/* HIGHLIGHT KARTU TOTAL PENGAJUAN */}
           <Link
-            href="/detail-monitoring?view=total"
+            href={
+              role === "ADMIN_PAM" && pamRegionFilter !== "ALL"
+                ? `/detail-monitoring?region=${pamRegionFilter}`
+                : "/detail-monitoring?view=total"
+            }
             className="group relative flex flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br from-brand via-brand-600 to-navy p-6 text-white shadow-pop ring-4 ring-blue-100 transition hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between gap-3">
@@ -457,9 +600,13 @@ export function HomeClient({
             <div className="my-3">
               <div className="text-5xl font-black tracking-tight text-white">{totalScoped}</div>
               <div className="mt-1 text-xs text-white/80">
-                {scope === "SPBU"
+                {role === "ADMIN_SPBU"
                   ? "Transaksi pengajuan dari SPBU Anda"
-                  : `${kpi.spbuSubmitted || 0} dari ${kpi.totalSpbu || 0} SPBU telah mengajukan`}
+                  : role === "ADMIN_REGION"
+                    ? `${activeKpi.spbuSubmitted || 0} dari ${activeKpi.totalSpbu || 0} SPBU di ${userRegionName || "Region Anda"} telah mengajukan`
+                    : pamRegionFilter === "ALL"
+                      ? `${activeKpi.spbuSubmitted || 0} dari ${activeKpi.totalSpbu || 0} SPBU COCO (Nasional) telah mengajukan`
+                      : `${activeKpi.spbuSubmitted || 0} dari ${activeKpi.totalSpbu || 0} SPBU di ${activeRegionName} telah mengajukan`}
               </div>
             </div>
 
@@ -477,7 +624,7 @@ export function HomeClient({
                 <div>
                   <div className="text-sm font-extrabold text-navy">Alur Progres Penyelesaian Pengajuan</div>
                   <div className="text-xs text-slate-500">
-                    <b>{kpi.approvedOrBeyond || 0}</b> pengajuan ({progressedPct}%) telah disetujui / masuk tahap Pooling &amp; MEMO
+                    <b>{activeKpi.approvedOrBeyond || 0}</b> pengajuan ({progressedPct}%) telah disetujui / masuk tahap Pooling &amp; MEMO
                   </div>
                 </div>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-700 ring-1 ring-emerald-200">
@@ -511,15 +658,22 @@ export function HomeClient({
                 return (
                   <Link
                     key={st.label}
-                    href={`/detail-monitoring?view=${st.view}`}
-                    className={`group rounded-2xl p-3 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card ${st.bg}`}
+                    href={
+                      role === "ADMIN_PAM" && pamRegionFilter !== "ALL"
+                        ? `/detail-monitoring?view=${st.view}&region=${pamRegionFilter}`
+                        : `/detail-monitoring?view=${st.view}`
+                    }
+                    className={`group flex flex-col justify-between rounded-2xl p-3 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-card ${st.bg}`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className={`h-2.5 w-2.5 rounded-full ${st.color}`} />
-                      <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className={`h-2.5 w-2.5 rounded-full ${st.color}`} />
+                        <span className="text-[11px] font-bold text-slate-400">{pct}%</span>
+                      </div>
+                      <div className={`mt-1.5 text-2xl font-extrabold ${st.text}`}>{st.count}</div>
+                      <div className="mt-0.5 text-xs font-bold text-navy group-hover:underline">{st.label}</div>
                     </div>
-                    <div className={`mt-1.5 text-2xl font-extrabold ${st.text}`}>{st.count}</div>
-                    <div className="mt-0.5 text-xs font-semibold text-navy group-hover:underline">{st.label}</div>
+                    <p className="mt-1.5 text-[10px] leading-tight text-slate-500">{st.desc}</p>
                   </Link>
                 );
               })}
@@ -838,7 +992,66 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* 4. TANYA SI GEMAS — ASISTEN RESMI KEARSIPAN (KHUSUS ADMIN SPBU SAAT SCROLL KE BAWAH) */}
+      {/* 4. AKSES MENU UTAMA */}
+      <section>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-slate-500">
+          Akses Menu Utama
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/dashboard"
+            className="card group flex items-center gap-3.5 p-4 transition hover:-translate-y-0.5 hover:shadow-pop"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-white shadow-card">
+              <LayoutDashboard className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-navy group-hover:text-brand">Dashboard Monitoring</h3>
+              <p className="truncate text-xs text-slate-500">Pantau progres &amp; funnel MEMO</p>
+            </div>
+          </Link>
+          <Link
+            href="/detail-monitoring"
+            className="card group flex items-center gap-3.5 p-4 transition hover:-translate-y-0.5 hover:shadow-pop"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-navy text-white shadow-card">
+              <ClipboardList className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-navy group-hover:text-brand">Rincian Data Monitoring</h3>
+              <p className="truncate text-xs text-slate-500">Tabel lengkap seluruh KPI</p>
+            </div>
+          </Link>
+          <Link
+            href="/submissions"
+            className="card group flex items-center gap-3.5 p-4 transition hover:-translate-y-0.5 hover:shadow-pop"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-prtred text-white shadow-card">
+              <FilePlus2 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-navy group-hover:text-brand">Pengajuan Usul Musnah</h3>
+              <p className="truncate text-xs text-slate-500">
+                {role === "ADMIN_SPBU" ? "Buat & pantau usul musnah" : "Review, pooling & catat MEMO"}
+              </p>
+            </div>
+          </Link>
+          <Link
+            href="/info"
+            className="card group flex items-center gap-3.5 p-4 transition hover:-translate-y-0.5 hover:shadow-pop"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-card">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-navy group-hover:text-brand">Pusat Informasi Arsip</h3>
+              <p className="truncate text-xs text-slate-500">Pedoman, TKI, JRDP &amp; manual</p>
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      {/* 5. TANYA SI GEMAS — ASISTEN RESMI KEARSIPAN */}
       <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-softblue/30 to-blue-50/50 p-6 sm:p-8 shadow-card">
         <div className="grid gap-6 lg:grid-cols-[1.25fr_1fr] items-center">
           {/* Sisi Kiri: Maskot & Input Tanya Langsung */}
@@ -854,7 +1067,7 @@ export function HomeClient({
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-brand">
-                    Asisten Cerdas SPBU
+                    Asisten Cerdas Kearsipan
                   </span>
                   <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -890,7 +1103,7 @@ export function HomeClient({
             >
               <input
                 type="text"
-                placeholder="Tulis pertanyaan Anda seputar kearsipan SPBU di sini…"
+                placeholder="Tulis pertanyaan Anda seputar kearsipan di sini…"
                 value={askInput}
                 onChange={(e) => setAskInput(e.target.value)}
                 className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-4 pr-32 text-xs sm:text-sm text-navy shadow-sm transition placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-blue-100"

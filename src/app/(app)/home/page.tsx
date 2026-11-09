@@ -9,36 +9,24 @@ export default async function HomePage() {
   const u = await requireUser();
   const data = await getHomePageData(u);
 
-  // Khusus Admin SPBU: Tampilkan Beranda baru (Slider Foto/Info, Progress Pengajuan, Grafik 7 Region & Top 3 Leaderboard)
-  if (u.role === "ADMIN_SPBU") {
-    return (
-      <HomeClient
-        role={u.role}
-        userDisplayName={u.name}
-        greetingName={data.greetingName}
-        isDemo={!!u.isDemo && process.env.DEMO_MODE !== "false"}
-        slides={data.slides}
-        kpi={data.kpi}
-        scope={data.scope}
-        regionStats={data.regionStats}
-        nationalTotalSubmissions={data.nationalTotalSubmissions}
-        topRegions={data.topRegions}
-        topSpbus={data.topSpbus}
-        mySpbuRank={data.mySpbuRank}
-        myRegionRank={data.myRegionRank}
-      />
-    );
-  }
-
-  // Untuk Hak Akses Akun Lain (Admin PAM / Head Office dan PIC Region): Tampilkan Beranda Asli Lengkap dengan Menu Utama & Dashboard
   return (
-    <GeneralHomeView
+    <HomeClient
       role={u.role}
       userDisplayName={u.name}
       greetingName={data.greetingName}
+      userRegionName={data.userRegionName}
       isDemo={!!u.isDemo && process.env.DEMO_MODE !== "false"}
-      kpi={data.kpi}
       slides={data.slides}
+      kpi={data.kpi}
+      scope={data.scope}
+      regionStats={data.regionStats}
+      nationalTotalSubmissions={data.nationalTotalSubmissions}
+      topRegions={data.topRegions}
+      topSpbus={data.topSpbus}
+      mySpbuRank={data.mySpbuRank}
+      myRegionRank={data.myRegionRank}
+      regions={data.regions}
+      regionKpis={data.regionKpis}
     />
   );
 }
