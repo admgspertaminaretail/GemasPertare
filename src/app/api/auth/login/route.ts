@@ -20,8 +20,15 @@ export async function POST(req: Request) {
 
     const store = await getStore();
     const [users, spbus] = await Promise.all([store.list("USERS"), store.list("SPBUS")]);
+    const cleanUname = uname.replace(/[^a-z0-9]/g, "");
     const u = users.find(
-      (x) => x.username.toLowerCase() === uname || (x.email && x.email.toLowerCase() === uname)
+      (x) =>
+        x.username.toLowerCase() === uname ||
+        (x.email && x.email.toLowerCase() === uname) ||
+        (x.role_id === "ADMIN_SPBU" && (
+          x.spbu_id.toLowerCase() === cleanUname ||
+          x.username.toLowerCase() === `spbu${cleanUname}`
+        ))
     );
 
     // Pengecekan ringan keberadaan username & saran koreksi otomatis
