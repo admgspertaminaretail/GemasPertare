@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { GemasLogo, PertaminaLogo } from "../art/Logos";
 import { Mascot } from "../art/Mascot";
+import { FloatingGemasWidget } from "../ai/FloatingGemasWidget";
 import { DemoTag } from "../ui/kit";
 import { Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
@@ -684,6 +685,9 @@ export function Shell({ user, children }: { user: ShellUser; children: ReactNode
           </div>
         </div>
       </Modal>
+
+      {/* Floating Mascot Assistant - Tanya si GEMAS (Tampil di semua halaman) */}
+      <FloatingGemasWidget role={user.role} />
     </div>
   );
 }

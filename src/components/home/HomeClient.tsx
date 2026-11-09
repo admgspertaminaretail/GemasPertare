@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   ArrowRight,
   Award,
+  BookOpen,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -26,6 +28,7 @@ import {
   Image as ImageIcon,
   Loader2,
   Medal,
+  MessageSquare,
   Pencil,
   Plus,
   Power,
@@ -135,6 +138,7 @@ export function HomeClient({
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
   const [leaderTab, setLeaderTab] = useState<"region" | "spbu">("region");
+  const [askInput, setAskInput] = useState("");
 
   // Modal kelola slide (khusus Admin GS / PAM)
   const [manageOpen, setManageOpen] = useState(false);
@@ -273,8 +277,6 @@ export function HomeClient({
     "Total Pengajuan": r.total_submissions,
     "Selesai (Di-Memo)": r.memoed,
   }));
-
-  const REGION_COLORS = ["#006CB7", "#0EA5E9", "#10B981", "#69B345", "#F59E0B", "#6366F1", "#EC4899"];
 
   return (
     <div className="space-y-6">
@@ -526,10 +528,10 @@ export function HomeClient({
         </div>
       </section>
 
-      {/* 3. DRAG KE BAWAH: CHARTS TOTAL PENGAJUAN 7 REGION & PERINGKAT TOP 3 SERU */}
+      {/* 3. CHARTS TOTAL PENGAJUAN 7 REGION & PERINGKAT TOP 3 TERAKTIF */}
       <section className="grid gap-5 xl:grid-cols-[1.15fr_1fr]">
-        {/* GRAFIK 7 REGION */}
-        <div className="card flex flex-col justify-between p-5 sm:p-6">
+        {/* GRAFIK 7 REGION - PALET KORPORAT PERTAMINA RESMI */}
+        <div className="card flex flex-col justify-between border border-slate-200/80 bg-white p-5 sm:p-6 shadow-card">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <div className="inline-flex items-center gap-1.5 rounded-full bg-softblue px-2.5 py-0.5 text-[11px] font-extrabold text-brand">
@@ -572,108 +574,146 @@ export function HomeClient({
                     );
                   }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="Total Pengajuan" radius={[8, 8, 0, 0]}>
-                  {regionChartData.map((entry, index) => (
+                <Bar dataKey="Total Pengajuan" radius={[6, 6, 0, 0]}>
+                  {regionChartData.map((entry) => (
                     <Cell
                       key={entry.region_id}
-                      fill={entry.is_my_region ? "#E52329" : REGION_COLORS[index % REGION_COLORS.length]}
+                      fill={entry.is_my_region ? "#E52329" : "#006CB7"}
                     />
                   ))}
                 </Bar>
-                <Bar dataKey="Selesai (Di-Memo)" fill="#163B63" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="Selesai (Di-Memo)" fill="#0F2C4B" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-cloud px-4 py-2.5 text-xs text-slate-600">
-            <span>
-              {role !== "ADMIN_PAM"
-                ? "Bar berwarna merah menandai capaian Region Anda saat ini."
-                : "Data grafik diperbarui otomatis setiap kali SPBU mengirim pengajuan."}
-            </span>
-            <span className="font-bold text-navy">{regionStats.length} Region Aktif</span>
+          {/* Legenda Korporat & Keterangan Rinci */}
+          <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+            <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-sm bg-[#006CB7]" />
+                <span className="font-semibold text-slate-700">Total Pengajuan</span>
+              </div>
+              {role !== "ADMIN_PAM" && (
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-sm bg-[#E52329]" />
+                  <span className="font-bold text-[#E52329]">Region Anda</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="h-3 w-3 rounded-sm bg-[#0F2C4B]" />
+                <span className="font-semibold text-slate-700">Selesai (Di-Memo)</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-xs text-slate-600">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                {role !== "ADMIN_PAM"
+                  ? "Bar merah menandai capaian Region Anda saat ini."
+                  : "Data grafik diperbarui otomatis dari seluruh pengajuan Region I s.d. VII."}
+              </span>
+              <span className="font-bold text-navy">{regionStats.length} Region Aktif</span>
+            </div>
           </div>
         </div>
 
-        {/* PERINGKAT TOP 3 SERU — PEMACU SEMANGAT SPBU */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 via-white to-emerald-50 p-5 shadow-card ring-1 ring-amber-200/80 sm:p-6">
+        {/* PERINGKAT TOP 3 TERAKTIF — APRESIASI TERTIB ARSIP EKSEKUTIF */}
+        <div className="card flex flex-col justify-between border border-slate-200/80 bg-white p-5 sm:p-6 shadow-card">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/25 px-3 py-0.5 text-[11px] font-extrabold text-amber-900 ring-1 ring-amber-400/40">
-                <Flame className="h-3.5 w-3.5 text-prtred" />
-                Hall of Fame · Tertib Arsip!
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-900 border border-amber-200/70">
+                <Trophy className="h-3.5 w-3.5 text-amber-600" />
+                Klasemen Kepatuhan Arsip
               </div>
-              <h2 className="mt-1.5 flex items-center gap-2 text-lg font-extrabold text-navy">
-                <Trophy className="h-5 w-5 text-amber-500" />
+              <h2 className="mt-1.5 text-lg font-extrabold text-navy">
                 Peringkat Top 3 Teraktif
               </h2>
-              <p className="text-xs text-slate-600">
-                Apresiasi bagi Region &amp; SPBU paling sigap mengelola usul musnah arsip!
+              <p className="text-xs text-slate-500">
+                Apresiasi bagi Region &amp; SPBU paling sigap menuntaskan usul musnah arsip.
               </p>
             </div>
 
-            <div className="flex rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
+            <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/60">
               <button
                 type="button"
                 onClick={() => setLeaderTab("region")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
-                  leaderTab === "region" ? "bg-brand text-white" : "text-navy hover:bg-softblue"
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  leaderTab === "region"
+                    ? "bg-white text-navy shadow-sm"
+                    : "text-slate-600 hover:text-navy"
                 }`}
               >
-                🏆 Top 3 Region
+                Top 3 Region
               </button>
               <button
                 type="button"
                 onClick={() => setLeaderTab("spbu")}
-                className={`rounded-lg px-3 py-1.5 text-xs font-extrabold transition ${
-                  leaderTab === "spbu" ? "bg-prtgreen text-white" : "text-navy hover:bg-emerald-50"
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  leaderTab === "spbu"
+                    ? "bg-white text-navy shadow-sm"
+                    : "text-slate-600 hover:text-navy"
                 }`}
               >
-                ⭐ Top 3 SPBU
+                Top 3 SPBU
               </button>
             </div>
           </div>
 
-          {/* Kartu Podium Top 3 */}
-          <div className="mt-4 space-y-3">
+          {/* Kartu Peringkat Top 3 - Gaya Metallic Corporate */}
+          <div className="mt-4 space-y-2.5">
             {leaderTab === "region" ? (
               topRegions.map((r, i) => {
-                const rankStyle =
+                const rankMeta =
                   i === 0
                     ? {
-                        card: "bg-gradient-to-r from-amber-400/25 via-yellow-50 to-white ring-2 ring-amber-400 shadow-md",
-                        badgeBg: "bg-gradient-to-br from-amber-400 to-orange-500 text-white",
-                        titleTag: "JUARA 1 · GOLD CHAMPION",
-                        icon: <Crown className="h-5 w-5" />,
+                        card: "border-amber-200/90 bg-gradient-to-r from-amber-50/60 via-amber-50/15 to-white",
+                        badge: "bg-gradient-to-br from-amber-400 to-amber-600 text-white ring-2 ring-amber-100",
+                        num: "01",
+                        label: "Peringkat 1 Nasional",
+                        labelCls: "bg-amber-100/90 text-amber-900",
+                        icon: <Crown className="h-3 w-3 text-amber-700" />,
                       }
                     : i === 1
                       ? {
-                          card: "bg-gradient-to-r from-slate-200/70 via-white to-white ring-1 ring-slate-300",
-                          badgeBg: "bg-gradient-to-br from-slate-400 to-slate-600 text-white",
-                          titleTag: "PERINGKAT 2 · SILVER STAR",
-                          icon: <Medal className="h-5 w-5" />,
+                          card: "border-slate-200 bg-gradient-to-r from-slate-100/70 via-slate-50/20 to-white",
+                          badge: "bg-gradient-to-br from-slate-400 to-slate-600 text-white ring-2 ring-slate-100",
+                          num: "02",
+                          label: "Peringkat 2 Nasional",
+                          labelCls: "bg-slate-200/80 text-slate-800",
+                          icon: <Medal className="h-3 w-3 text-slate-600" />,
                         }
                       : {
-                          card: "bg-gradient-to-r from-orange-200/60 via-white to-white ring-1 ring-orange-300",
-                          badgeBg: "bg-gradient-to-br from-amber-600 to-amber-800 text-white",
-                          titleTag: "PERINGKAT 3 · BRONZE HERO",
-                          icon: <Award className="h-5 w-5" />,
+                          card: "border-orange-200/80 bg-gradient-to-r from-orange-50/50 via-amber-50/10 to-white",
+                          badge: "bg-gradient-to-br from-amber-700 to-orange-800 text-white ring-2 ring-orange-100",
+                          num: "03",
+                          label: "Peringkat 3 Nasional",
+                          labelCls: "bg-orange-100/80 text-orange-950",
+                          icon: <Award className="h-3 w-3 text-orange-700" />,
                         };
                 return (
-                  <div key={r.region_id} className={`rounded-2xl p-4 transition hover:-translate-y-0.5 ${rankStyle.card}`}>
+                  <div
+                    key={r.region_id}
+                    className={`rounded-2xl border p-3.5 transition hover:shadow-card ${rankMeta.card}`}
+                  >
                     <div className="flex items-center gap-3.5">
-                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl font-black shadow-sm ${rankStyle.badgeBg}`}>
-                        {rankStyle.icon}
+                      <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-mono text-sm font-black shadow-sm ${rankMeta.badge}`}
+                      >
+                        {rankMeta.num}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
-                            {rankStyle.titleTag}
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${rankMeta.labelCls}`}
+                          >
+                            {rankMeta.icon}
+                            {rankMeta.label}
                           </span>
                           {r.is_my_region && (
-                            <span className="rounded-full bg-prtred px-2 py-0.5 text-[10px] font-extrabold text-white">
-                              Region Kita! 🔥
+                            <span className="inline-flex items-center gap-1 rounded-full bg-prtred px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                              Region Anda
                             </span>
                           )}
                         </div>
@@ -683,57 +723,87 @@ export function HomeClient({
                             <span className="ml-1.5 text-xs font-semibold text-brand">· {r.pic_name}</span>
                           )}
                         </div>
-                        <div className="mt-0.5 text-xs text-slate-600">
+                        <div className="mt-0.5 text-xs text-slate-500">
                           <b>{r.spbu_submitted}</b> dari {r.total_spbu} SPBU aktif mengajukan ({r.participation_pct}% partisipasi)
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-black text-navy">{r.total_submissions}</div>
-                        <div className="text-[10px] font-bold uppercase text-slate-500">Pengajuan</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pengajuan</div>
                       </div>
                     </div>
                   </div>
                 );
               })
             ) : topSpbus.length === 0 ? (
-              <div className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500 ring-1 ring-slate-200">
-                Belum ada pengajuan SPBU. Jadilah SPBU pertama yang naik ke Podium Juara 1! 🚀
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+                Belum ada pengajuan SPBU. Jadilah SPBU pertama yang menempati Peringkat 1! 🚀
               </div>
             ) : (
               topSpbus.map((s, i) => {
-                const medal = i === 0 ? "🥇 Juara 1" : i === 1 ? "🥈 Juara 2" : "🥉 Juara 3";
-                const bg =
+                const rankMeta =
                   i === 0
-                    ? "bg-gradient-to-r from-amber-400/25 via-yellow-50 to-white ring-2 ring-amber-400 shadow-md"
+                    ? {
+                        card: "border-amber-200/90 bg-gradient-to-r from-amber-50/60 via-amber-50/15 to-white",
+                        badge: "bg-gradient-to-br from-amber-400 to-amber-600 text-white ring-2 ring-amber-100",
+                        num: "01",
+                        label: "Peringkat 1 · SPBU Teraktif",
+                        labelCls: "bg-amber-100/90 text-amber-900",
+                      }
                     : i === 1
-                      ? "bg-white ring-1 ring-slate-300"
-                      : "bg-white ring-1 ring-orange-300";
+                      ? {
+                          card: "border-slate-200 bg-gradient-to-r from-slate-100/70 via-slate-50/20 to-white",
+                          badge: "bg-gradient-to-br from-slate-400 to-slate-600 text-white ring-2 ring-slate-100",
+                          num: "02",
+                          label: "Peringkat 2 · SPBU Teraktif",
+                          labelCls: "bg-slate-200/80 text-slate-800",
+                        }
+                      : {
+                          card: "border-orange-200/80 bg-gradient-to-r from-orange-50/50 via-amber-50/10 to-white",
+                          badge: "bg-gradient-to-br from-amber-700 to-orange-800 text-white ring-2 ring-orange-100",
+                          num: "03",
+                          label: "Peringkat 3 · SPBU Teraktif",
+                          labelCls: "bg-orange-100/80 text-orange-950",
+                        };
                 return (
-                  <div key={s.spbu_id} className={`rounded-2xl p-4 transition hover:-translate-y-0.5 ${bg}`}>
+                  <div
+                    key={s.spbu_id}
+                    className={`rounded-2xl border p-3.5 transition hover:shadow-card ${rankMeta.card}`}
+                  >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-extrabold text-amber-900">
-                            {medal} · Pejuang Arsip
-                          </span>
-                          <span className="text-[11px] font-bold text-brand">{s.region_name}</span>
-                          {s.is_my_spbu && (
-                            <span className="rounded-full bg-prtgreen px-2 py-0.5 text-[10px] font-extrabold text-white">
-                              SPBU Anda! 🎉
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-mono text-sm font-black shadow-sm ${rankMeta.badge}`}
+                        >
+                          {rankMeta.num}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${rankMeta.labelCls}`}
+                            >
+                              {rankMeta.label}
                             </span>
-                          )}
-                        </div>
-                        <div className="mt-1 truncate text-sm font-extrabold text-navy">
-                          {s.spbu_name} <span className="font-mono text-xs text-slate-500">({s.spbu_code})</span>
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {s.city ? `${s.city} · ` : ""}
-                          {s.memoed} selesai Memo · {s.arsip_rows} baris arsip tercatat
+                            <span className="text-[11px] font-bold text-brand">{s.region_name}</span>
+                            {s.is_my_spbu && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                                <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                                SPBU Anda
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-0.5 truncate text-sm font-extrabold text-navy">
+                            {s.spbu_name} <span className="font-mono text-xs text-slate-500">({s.spbu_code})</span>
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {s.city ? `${s.city} · ` : ""}
+                            {s.memoed} selesai Memo · {s.arsip_rows} baris arsip tercatat
+                          </div>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="text-2xl font-black text-prtgreen">{s.total_submissions}</div>
-                        <div className="text-[10px] font-bold uppercase text-slate-500">Pengajuan</div>
+                        <div className="text-2xl font-black text-navy">{s.total_submissions}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pengajuan</div>
                       </div>
                     </div>
                   </div>
@@ -743,24 +813,172 @@ export function HomeClient({
           </div>
 
           {/* Footer penyemangat bagi SPBU / Region */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-navy px-4 py-3 text-xs text-white">
-            <div className="flex items-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-navy to-[#163B63] px-4 py-3 text-xs text-white shadow-sm">
+            <div className="flex items-center gap-2.5">
               <Sparkles className="h-4 w-4 shrink-0 text-amber-300" />
-              <span>
+              <span className="font-medium text-white/95">
                 {role === "ADMIN_SPBU" && mySpbuRank
                   ? mySpbuRank <= 3
-                    ? `Luar biasa! SPBU Anda berada di Peringkat #${mySpbuRank} Nasional! Pertahankan! 🏆`
-                    : `SPBU Anda saat ini di urutan #${mySpbuRank}. Yuk ajukan tertib arsip untuk tembus Top 3! 💪`
+                    ? `Luar biasa! SPBU Anda berada di Peringkat #${mySpbuRank} Nasional! Pertahankan ketertiban arsip Anda.`
+                    : `SPBU Anda saat ini berada di urutan #${mySpbuRank}. Tingkatkan ketertiban arsip untuk menembus Top 3!`
                   : role === "ADMIN_REGION" && myRegionRank
-                    ? `Region Anda berada di Peringkat #${myRegionRank} dari ${regionStats.length} Region! Terus semangat! 🔥`
-                    : "Semangat tertib arsip menuju ruang kerja SPBU yang rapi, aman, dan andal!"}
+                    ? `Region Anda berada di Peringkat #${myRegionRank} dari ${regionStats.length} Region.`
+                    : "Tertib arsip mendukung ruang operasional SPBU yang bersih, aman, dan siap audit berkala."}
               </span>
             </div>
             {role === "ADMIN_SPBU" && (
-              <Link href="/submissions/new" className="font-extrabold text-amber-300 hover:underline">
-                + Ajukan Sekarang →
+              <Link
+                href="/submissions/new"
+                className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-white/15 px-3 py-1.5 font-bold text-white ring-1 ring-white/20 transition hover:bg-white hover:text-navy"
+              >
+                + Buat Pengajuan
               </Link>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. TANYA SI GEMAS — ASISTEN RESMI KEARSIPAN (KHUSUS ADMIN SPBU SAAT SCROLL KE BAWAH) */}
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-softblue/30 to-blue-50/50 p-6 sm:p-8 shadow-card">
+        <div className="grid gap-6 lg:grid-cols-[1.25fr_1fr] items-center">
+          {/* Sisi Kiri: Maskot & Input Tanya Langsung */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3.5">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white shadow-card ring-1 ring-blue-100">
+                <Mascot size={58} mood="happy" className="animate-floaty" />
+                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                </span>
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-brand">
+                    Asisten Cerdas SPBU
+                  </span>
+                  <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Online Siap Membantu
+                  </span>
+                </div>
+                <h2 className="mt-1 text-xl sm:text-2xl font-black text-navy">
+                  Tanya si GEMAS
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Konsultasikan jadwal retensi berkas, tata cara usul musnah, atau data tarikan i-BOS.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              Bingung dokumen mana yang sudah habis masa retensinya? Atau butuh panduan pengisian berkas berita acara? Tanyakan langsung di sini dan si GEMAS akan memberikan rujukan resmi pedoman Pertamina Retail.
+            </p>
+
+            {/* Form Input Pertanyaan Cepat */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = askInput.trim();
+                if (q) {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("gemas:ask", { detail: { question: q } }));
+                  }
+                  setAskInput("");
+                }
+              }}
+              className="relative flex items-center"
+            >
+              <input
+                type="text"
+                placeholder="Tulis pertanyaan Anda seputar kearsipan SPBU di sini…"
+                value={askInput}
+                onChange={(e) => setAskInput(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-white py-3.5 pl-4 pr-32 text-xs sm:text-sm text-navy shadow-sm transition placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-blue-100"
+              />
+              <button
+                type="submit"
+                disabled={!askInput.trim()}
+                className="absolute right-2 flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-40"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Tanya GEMAS</span>
+              </button>
+            </form>
+
+            {/* Chips Saran Pertanyaan */}
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Pilihan Pertanyaan Cepat:
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {[
+                  "Berapa tahun masa retensi bukti kas/setoran BBM?",
+                  "Apa saja syarat berkas pengajuan usul musnah?",
+                  "Bagaimana cara download Data Arsip Tarikan i-BOS?",
+                  "Apa bedanya Formulir FUPA dan Daftar Arsip Usul Musnah?",
+                ].map((promptText) => (
+                  <button
+                    key={promptText}
+                    type="button"
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("gemas:ask", { detail: { question: promptText } }));
+                      }
+                    }}
+                    className="flex items-center gap-1.5 rounded-xl border border-blue-100 bg-white px-3 py-1.5 text-left text-xs font-semibold text-brand transition hover:border-brand hover:bg-softblue shadow-sm"
+                  >
+                    <MessageSquare className="h-3 w-3 text-brand" />
+                    <span>{promptText}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sisi Kanan: 3 Keunggulan Asisten GEMAS */}
+          <div className="space-y-3 rounded-2xl border border-slate-200/80 bg-white/90 p-5 backdrop-blur shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Rujukan Resmi &amp; Akurat
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-brand">
+                  <BookOpen className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-navy">Berdasarkan Pedoman Resmi PT Pertamina Retail</div>
+                  <div className="text-[11px] text-slate-500">Jawaban menyertakan nomor dokumen dan nomor halaman JRDP resmi.</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-navy">Format &amp; Template Terpadu</div>
+                  <div className="text-[11px] text-slate-500">Menyediakan tautan langsung ke template daftar arsip dan panduan i-BOS.</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-800">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-navy">Tersedia Kapan Saja 24/7</div>
+                  <div className="text-[11px] text-slate-500">Petugas SPBU dapat berkonsultasi kapan saja saat memilah berkas di lapangan.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3">
+              <Link
+                href="/ask"
+                className="flex items-center justify-between rounded-xl bg-cloud px-3 py-2 text-xs font-bold text-brand hover:bg-softblue"
+              >
+                <span>Buka Percakapan Penuh di Halaman Tanya si GEMAS</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
