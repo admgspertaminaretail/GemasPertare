@@ -109,6 +109,27 @@ export function parseGoogleId(input?: string): string {
   return s.replace(/[^a-zA-Z0-9_-]/g, "");
 }
 
+export function normalizePrivateKey(raw: string): string {
+  if (!raw) return "";
+  let s = raw.trim();
+  if (s.startsWith("GOOGLE_PRIVATE_KEY=")) {
+    s = s.slice("GOOGLE_PRIVATE_KEY=".length).trim();
+  }
+  s = s.replace(/^["']|["']$/g, "").trim();
+  s = s.replace(/^\\"|\\"$/g, "").trim();
+  s = s.replace(/\\+n/g, "\n").replace(/\r/g, "");
+  const begin = "-----BEGIN PRIVATE KEY-----";
+  const end = "-----END PRIVATE KEY-----";
+  const beginIdx = s.indexOf(begin);
+  const endIdx = s.indexOf(end);
+  if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
+    const body = s.slice(beginIdx + begin.length, endIdx).replace(/\s+/g, "");
+    const formattedBody = body.match(/.{1,64}/g)?.join("\n") || body;
+    return `${begin}\n${formattedBody}\n${end}\n`;
+  }
+  return s;
+}
+
 /**
  * Mencari kredensial Google Service Account secara otomatis dari:
  * 1. File `credentials/service-account.json` (atau file *.json Service Account di dalam folder `credentials/`)
@@ -137,8 +158,8 @@ export function loadGoogleCredentials(): GoogleCredentialsInfo | null {
       const raw = JSON.parse(fs.readFileSync(c.file, "utf8"));
       if (raw.client_email && raw.private_key) {
         return {
-          email: String(raw.client_email),
-          privateKey: String(raw.private_key).replace(/\\n/g, "\n"),
+          email: String(raw.client_email).trim(),
+          privateKey: normalizePrivateKey(String(raw.private_key)),
           projectId: String(raw.project_id || ""),
           source: c.label,
         };
@@ -147,11 +168,8 @@ export function loadGoogleCredentials(): GoogleCredentialsInfo | null {
   }
 
   const email = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "").trim();
-  let key = (process.env.GOOGLE_PRIVATE_KEY || "").trim();
-  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-    key = key.slice(1, -1);
-  }
-  key = key.replace(/\\n/g, "\n").replace(/\r/g, "").trim();
+  const rawKey = process.env.GOOGLE_PRIVATE_KEY || "";
+  const key = normalizePrivateKey(rawKey);
   if (email && key) {
     return { email, privateKey: key, projectId: "", source: "Environment Variables (.env.local)" };
   }
