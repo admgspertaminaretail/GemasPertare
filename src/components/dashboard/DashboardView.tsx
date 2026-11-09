@@ -75,22 +75,22 @@ export function DashboardView({ data, role, filters, basePath, fixedRegion }: { 
     ? [
         { key: "totalSpbu", label: "Total SPBU", value: k.totalSpbu, icon: <Store className="h-6 w-6" />, tone: "navy" },
         { key: "spbuSubmitted", label: "SPBU sudah mengajukan", value: k.spbuSubmitted, icon: <Building2 className="h-6 w-6" />, tone: "blue", hint: "Jumlah SPBU unik, bukan jumlah transaksi" },
-        { key: "total", label: "Total transaksi pengajuan", value: k.total, icon: <FileStack className="h-6 w-6" />, tone: "blue" },
+        { key: "total", label: "Total transaksi pengajuan", value: k.total, icon: <FileStack className="h-6 w-6" />, tone: "green" },
         { key: "review", label: "Menunggu review", value: k.review, icon: <Clock className="h-6 w-6" />, tone: "amber", hint: "Berdasarkan status terakhir" },
         { key: "revision", label: "Perlu revisi", value: k.revision, icon: <FileEdit className="h-6 w-6" />, tone: "red" },
         { key: "approved", label: "Disetujui", value: k.approved, icon: <CheckCircle2 className="h-6 w-6" />, tone: "green", hint: "Disetujui, belum masuk pooling" },
-        { key: "pooled", label: "Sudah masuk pooling", value: k.pooled, icon: <Layers className="h-6 w-6" />, tone: "blue", hint: "Sudah pooling, belum di-Memo" },
+        { key: "pooled", label: "Pooling", value: k.pooled, icon: <Layers className="h-6 w-6" />, tone: "blue", hint: "Sudah pooling, belum di-Memo" },
         { key: "memoed", label: "Sudah di-Memo", value: k.memoed, icon: <Send className="h-6 w-6" />, tone: "navy" },
       ]
     : [
         { key: "totalSpbu", label: data.scope === "SPBU" ? "Total SPBU" : "Total SPBU dalam Region", value: k.totalSpbu, icon: <Store className="h-6 w-6" />, tone: "navy" },
         { key: "spbuSubmitted", label: "SPBU sudah pernah mengajukan", value: k.spbuSubmitted, icon: <ClipboardCheck className="h-6 w-6" />, tone: "green", hint: "SPBU unik" },
         { key: "spbuNotSubmitted", label: "SPBU belum mengajukan", value: k.spbuNotSubmitted, icon: <Building2 className="h-6 w-6" />, tone: "slate" },
-        { key: "total", label: "Total transaksi pengajuan", value: k.total, icon: <FileStack className="h-6 w-6" />, tone: "blue" },
+        { key: "total", label: "Total transaksi pengajuan", value: k.total, icon: <FileStack className="h-6 w-6" />, tone: "green" },
         { key: "review", label: "Menunggu review", value: k.review, icon: <Clock className="h-6 w-6" />, tone: "amber" },
         { key: "revision", label: "Perlu revisi", value: k.revision, icon: <FileEdit className="h-6 w-6" />, tone: "red" },
         { key: "approved", label: "Disetujui", value: k.approved, icon: <CheckCircle2 className="h-6 w-6" />, tone: "green" },
-        { key: "pooled", label: "Sudah masuk pooling", value: k.pooled, icon: <Layers className="h-6 w-6" />, tone: "blue" },
+        { key: "pooled", label: "Pooling", value: k.pooled, icon: <Layers className="h-6 w-6" />, tone: "blue" },
         { key: "memoed", label: "Sudah di-Memo", value: k.memoed, icon: <Send className="h-6 w-6" />, tone: "navy" },
       ];
 
@@ -106,11 +106,11 @@ export function DashboardView({ data, role, filters, basePath, fixedRegion }: { 
   const perRegion = data.byRegion.map((r) => ({ region_id: r.region_id, name: r.name.replace("Region ", "R"), full: r.name, Pengajuan: r.total }));
   const poolingFunnel = [
     { name: "Disetujui (kumulatif)", value: k.approvedOrBeyond, fill: "#69B345", view: "approvedCumulative" },
-    { name: "Sudah pooling", value: k.pooledOrBeyond, fill: "#006CB7", view: "pooledCumulative" },
+    { name: "Pooling", value: k.pooledOrBeyond, fill: "#006CB7", view: "pooledCumulative" },
     { name: "Belum pooling", value: k.approved, fill: "#F59E0B", view: "approved" },
   ];
   const memoFunnel = [
-    { name: "Sudah pooling (kumulatif)", value: k.pooledOrBeyond, fill: "#006CB7", view: "pooledCumulative" },
+    { name: "Pooling (kumulatif)", value: k.pooledOrBeyond, fill: "#006CB7", view: "pooledCumulative" },
     { name: "Sudah di-Memo", value: k.memoed, fill: "#163B63", view: "memoed" },
     { name: "Pooling belum di-Memo", value: k.pooled, fill: "#F59E0B", view: "pooled" },
     { name: "MEMO diteruskan ke PAM", value: data.memoProgress.forwarded, fill: "#69B345", view: "memoForwarded" },

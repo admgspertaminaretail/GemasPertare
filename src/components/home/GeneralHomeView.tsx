@@ -84,11 +84,41 @@ export function GeneralHomeView({
 
   const isPam = role === "ADMIN_PAM";
   const summary = [
-    { label: "Menunggu review", v: kpi?.review ?? 0, s: STATUS.REVIEW, view: "review" },
-    { label: "Perlu revisi", v: kpi?.revision ?? 0, s: STATUS.REVISION, view: "revision" },
-    { label: "Disetujui", v: kpi?.approved ?? 0, s: STATUS.APPROVED, view: "approved" },
-    { label: "Sudah pooling", v: kpi?.pooled ?? 0, s: STATUS.POOLED, view: "pooled" },
-    { label: "Sudah di-Memo", v: kpi?.memoed ?? 0, s: STATUS.MEMOED, view: "memoed" },
+    {
+      label: "Menunggu review",
+      v: kpi?.review ?? 0,
+      s: STATUS.REVIEW,
+      view: "review",
+      desc: "Berkas baru SPBU, menunggu verifikasi Region",
+    },
+    {
+      label: "Perlu revisi",
+      v: kpi?.revision ?? 0,
+      s: STATUS.REVISION,
+      view: "revision",
+      desc: "Dikembalikan ke SPBU untuk diperbaiki",
+    },
+    {
+      label: "Disetujui",
+      v: kpi?.approved ?? 0,
+      s: STATUS.APPROVED,
+      view: "approved",
+      desc: "Lolos verifikasi, siap masuk tahap pooling",
+    },
+    {
+      label: "Pooling",
+      v: kpi?.pooled ?? 0,
+      s: STATUS.POOLED,
+      view: "pooled",
+      desc: "Penggabungan usul SPBU ke FUPA Regional",
+    },
+    {
+      label: "Sudah di-Memo",
+      v: kpi?.memoed ?? 0,
+      s: STATUS.MEMOED,
+      view: "memoed",
+      desc: "MEMO resmi diteruskan ke PAM / GS Pusat",
+    },
   ];
 
   const alert =
@@ -209,14 +239,31 @@ export function GeneralHomeView({
           Ringkasan status pengajuan {role === "ADMIN_REGION" ? "Region Anda" : "seluruh Region"}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <Link href="/detail-monitoring?view=total" className="card p-4 transition hover:-translate-y-0.5 hover:shadow-pop">
-            <div className="text-2xl font-extrabold text-navy">{kpi?.total ?? 0}</div>
-            <div className="text-xs text-slate-500">Total pengajuan</div>
+          <Link
+            href="/detail-monitoring?view=total"
+            className="card flex flex-col justify-between border-emerald-200/90 bg-gradient-to-br from-emerald-50/70 via-emerald-50/30 to-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-pop"
+          >
+            <div>
+              <div className="text-2xl font-black text-emerald-600">{kpi?.total ?? 0}</div>
+              <span className="chip mt-1.5 bg-emerald-100 font-bold text-emerald-800 ring-1 ring-emerald-300">
+                Total pengajuan
+              </span>
+            </div>
+            <p className="mt-2.5 text-[11px] leading-snug text-slate-500">
+              Akumulasi seluruh usul musnah dari SPBU
+            </p>
           </Link>
           {summary.map((s) => (
-            <Link key={s.label} href={`/detail-monitoring?view=${s.view}`} className="card p-4 transition hover:-translate-y-0.5 hover:shadow-pop">
-              <div className="text-2xl font-extrabold text-navy">{s.v}</div>
-              <span className={`chip mt-1 ${STATUS_STYLE[s.s]}`}>{s.label}</span>
+            <Link
+              key={s.label}
+              href={`/detail-monitoring?view=${s.view}`}
+              className="card flex flex-col justify-between p-4 transition hover:-translate-y-0.5 hover:shadow-pop"
+            >
+              <div>
+                <div className="text-2xl font-black text-navy">{s.v}</div>
+                <span className={`chip mt-1.5 ${STATUS_STYLE[s.s]}`}>{s.label}</span>
+              </div>
+              <p className="mt-2.5 text-[11px] leading-snug text-slate-500">{s.desc}</p>
             </Link>
           ))}
         </div>

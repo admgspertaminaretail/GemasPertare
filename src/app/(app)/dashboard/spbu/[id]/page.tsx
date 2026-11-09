@@ -27,11 +27,11 @@ export default async function SpbuDetail({ params }: { params: { id: string } })
         subtitle={`${d.spbu.spbu_code} · ${d.region?.region_name} · ${[d.spbu.city, d.spbu.province].filter(Boolean).join(", ")}${d.spbu.address ? " — " + d.spbu.address : ""}`}
         actions={u.role === "ADMIN_SPBU" ? <Link href="/submissions/new" className="btn-primary"><Plus className="h-4 w-4" />Buat Pengajuan</Link> : undefined} />
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <KpiCard label="Total pengajuan" value={c.total} tone="blue" />
+        <KpiCard label="Total pengajuan" value={c.total} tone="green" />
         <KpiCard label="Menunggu review" value={c.review} tone="amber" />
         <KpiCard label="Perlu revisi" value={c.revision} tone="red" />
         <KpiCard label="Disetujui" value={c.approved} tone="green" />
-        <KpiCard label="Sudah pooling" value={c.pooled} tone="blue" />
+        <KpiCard label="Pooling" value={c.pooled} tone="blue" />
         <KpiCard label="Sudah di-Memo" value={c.memoed} tone="navy" />
       </div>
       <h2 className="mb-2 text-sm font-bold text-navy">Seluruh transaksi pengajuan SPBU ini</h2>
