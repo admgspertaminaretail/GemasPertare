@@ -11,6 +11,7 @@
     "db:init": "node scripts/init_google_drive.mjs"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",

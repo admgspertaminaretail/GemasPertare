@@ -125,6 +125,20 @@ export async function saveFile(
       }
     }
 
+    if (!storageRef && process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { put } = await import("@vercel/blob");
+        const blob = await put(`${folder}/${safe}`, f.buffer, {
+          access: "public",
+          contentType: f.mime,
+        });
+        storageRef = blob.url;
+        fileUrl = blob.url;
+      } catch (blobErr: any) {
+        console.error("Upload via Vercel Blob gagal, mencoba direct Drive API:", blobErr?.message || blobErr);
+      }
+    }
+
     if (!storageRef) {
       const { drive } = getGoogleClients();
       const prefix = folder.includes("/") ? `${folder.split("/").slice(1).join("_")}__` : "";
@@ -187,6 +201,12 @@ export async function saveFile(
 }
 
 export async function readFile(ref: string): Promise<Buffer> {
+  if (ref.startsWith("https://") && !ref.includes("drive.google.com")) {
+    const res = await fetch(ref);
+    if (!res.ok) throw new Error(`Gagal mengunduh berkas HTTP ${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
   let driveId = "";
   if (ref.startsWith("drive:")) {
     driveId = ref.slice(6);
