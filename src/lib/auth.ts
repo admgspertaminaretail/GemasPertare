@@ -95,7 +95,15 @@ export async function requireUser(roles?: RoleId[]): Promise<SessionUser> {
 }
 
 export const hashPassword = (p: string) => bcrypt.hashSync(p, 10);
-export const verifyPassword = (p: string, h: string) => bcrypt.compareSync(p, h);
+export const verifyPassword = (p: string, h: string) => {
+  if (!h || !p) return false;
+  if (h === p) return true; // Mendukung kata sandi plain-text jika diedit langsung dari Spreadsheet
+  try {
+    return bcrypt.compareSync(p, h);
+  } catch {
+    return false;
+  }
+};
 
 /* ---------------- Proteksi 10x Percobaan Kata Sandi Salah ---------------- */
 interface GuardRecord {
