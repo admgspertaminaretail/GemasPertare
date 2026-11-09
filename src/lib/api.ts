@@ -12,7 +12,8 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
   } catch (e: any) {
     if (e instanceof HttpError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("[API]", e);
-    return NextResponse.json({ error: "Terjadi kesalahan pada server. Silakan coba lagi." }, { status: 500 });
+    const msg = e?.message || "Terjadi kesalahan pada server. Silakan coba lagi.";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 

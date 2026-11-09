@@ -146,8 +146,12 @@ export function loadGoogleCredentials(): GoogleCredentialsInfo | null {
     } catch { /* lewati file JSON yang tidak valid */ }
   }
 
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
-  const key = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  const email = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "").trim();
+  let key = (process.env.GOOGLE_PRIVATE_KEY || "").trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1);
+  }
+  key = key.replace(/\\n/g, "\n").replace(/\r/g, "").trim();
   if (email && key) {
     return { email, privateKey: key, projectId: "", source: "Environment Variables (.env.local)" };
   }

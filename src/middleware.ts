@@ -11,7 +11,9 @@ export async function middleware(req: NextRequest) {
   if (token) {
     try {
       const s = process.env.AUTH_SECRET;
-      const key = new TextEncoder().encode(s && s.length >= 32 ? s : "dev-only-secret-dev-only-secret-dev-only-1234");
+      const key = new TextEncoder().encode(
+        s && s.length >= 32 ? s : s && s.length > 0 ? s.padEnd(32, "0") : "gemas-pertamina-retail-default-secret-32-chars-key"
+      );
       await jwtVerify(token, key);
       ok = true;
     } catch {

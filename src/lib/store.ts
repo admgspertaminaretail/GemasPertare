@@ -98,17 +98,19 @@ export class SheetsStore implements Store {
     const meta = await this.sheetsApi.spreadsheets.get({ spreadsheetId: this.id });
     const existing = new Set<string>(meta.data.sheets.map((s: any) => s.properties.title));
     const requests = TABLES.filter((t) => !existing.has(t)).map((t) => ({ addSheet: { properties: { title: t } } }));
-    if (requests.length) await this.sheetsApi.spreadsheets.batchUpdate({ spreadsheetId: this.id, requestBody: { requests } });
-    await this.sheetsApi.spreadsheets.values.batchUpdate({
-      spreadsheetId: this.id,
-      requestBody: {
-        valueInputOption: "RAW",
-        data: TABLES.map((t) => ({
-          range: `${t}!A1`,
-          values: [[...SCHEMA[t]]],
-        })),
-      },
-    });
+    if (requests.length) {
+      await this.sheetsApi.spreadsheets.batchUpdate({ spreadsheetId: this.id, requestBody: { requests } });
+      await this.sheetsApi.spreadsheets.values.batchUpdate({
+        spreadsheetId: this.id,
+        requestBody: {
+          valueInputOption: "RAW",
+          data: requests.map((r: any) => ({
+            range: `${r.addSheet.properties.title}!A1`,
+            values: [[...SCHEMA[r.addSheet.properties.title as TableName]]],
+          })),
+        },
+      });
+    }
   }
 
   private parseSheetValues(t: TableName, values: any[][] | undefined): Row[] {
