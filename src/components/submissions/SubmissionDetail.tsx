@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Download, Eye, FileSpreadsheet, FileText, History, Image as Img, Layers, Loader2, RotateCcw, Send, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, Eye, FileSpreadsheet, FileText, History, Image as Img, Layers, Loader2, RotateCcw, Send, Trash2, Upload, XCircle } from "lucide-react";
 import { StatusBadge, DemoTag } from "../ui/kit";
 import { Modal } from "../ui/Modal";
 import { FileField } from "../ui/FileField";
@@ -33,6 +33,7 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
 
   const canReview = role === "ADMIN_REGION" && s.status === STATUS.REVIEW;
   const canResubmit = role === "ADMIN_SPBU" && s.status === STATUS.REVISION;
+  const canDelete = role === "ADMIN_PAM" || role === "ADMIN_REGION";
   const pending = revisions.find((r) => !r.resubmitted_at);
   const curDocs = documents.filter((d) => d.is_current === "1"), oldDocs = documents.filter((d) => d.is_current !== "1");
   const curPh = photos.filter((d) => d.is_current === "1"), oldPh = photos.filter((d) => d.is_current !== "1");
@@ -51,6 +52,19 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
     setBusy(true);
     try { await api(`/api/submissions/${s.submission_id}/resubmit`, fd); toast("success", "Dokumen revisi diunggah dan masuk antrean review."); close(); router.refresh(); }
     catch (e: any) { toast("error", e.message); } finally { setBusy(false); }
+  };
+  const deleteSub = async () => {
+    if (!window.confirm(`Hapus pengajuan ${s.submission_id} beserta seluruh dokumen & riwayatnya secara permanen?`)) return;
+    setBusy(true);
+    try {
+      await api(`/api/submissions/${s.submission_id}`, undefined, "DELETE");
+      toast("success", `Pengajuan ${s.submission_id} berhasil dihapus.`);
+      router.push("/submissions");
+    } catch (e: any) {
+      toast("error", e.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const DocRow = ({ d, old }: { d: R; old?: boolean }) => {
@@ -83,9 +97,20 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
             <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-extrabold text-navy">{s.submission_id}</h1><StatusBadge status={s.status} />{s.is_demo === "1" && <DemoTag />}{Number(s.current_revision) > 0 && <span className="chip bg-softblue text-brand ring-blue-100">Revisi terakhir: R{s.current_revision}</span>}</div>
             <p className="mt-1 text-sm text-slate-600">{s.description}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canReview && <><button className="btn-danger" onClick={() => setMode("revise")}><RotateCcw className="h-4 w-4" />Perlu Revisi</button><button className="btn-success" onClick={() => setMode("approve")}><CheckCircle2 className="h-4 w-4" />Setujui</button></>}
             {canResubmit && <button className="btn-primary" onClick={() => setMode("resubmit")}><Upload className="h-4 w-4" />Unggah Revisi</button>}
+            {canDelete && (
+              <button
+                className="btn-secondary text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                onClick={deleteSub}
+                disabled={busy}
+                title="Hapus pengajuan & seluruh dokumennya"
+              >
+                <Trash2 className="h-4 w-4" />
+                Hapus
+              </button>
+            )}
           </div>
         </div>
         <dl className="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
