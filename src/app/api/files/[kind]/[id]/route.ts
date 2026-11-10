@@ -310,7 +310,7 @@ export async function GET(req: Request, { params }: { params: { kind: string; id
       } catch (e) {
         if (
           !(parsedMeta?.headers && parsedMeta?.previewRows) &&
-          !(params.kind === "template" && isDemoRecord) &&
+          params.kind !== "template" &&
           params.kind !== "knowledge"
         ) {
           throw e;
@@ -325,11 +325,21 @@ export async function GET(req: Request, { params }: { params: { kind: string; id
       ws.columns.forEach((c) => (c.width = 24));
       buf = Buffer.from(await wb.xlsx.writeBuffer());
     }
-    if (!buf && params.kind === "template" && isDemoRecord && rowRecord) {
+    if (!buf && params.kind === "template" && rowRecord) {
       const assets = await buildTemplateAssets();
-      if (rowRecord.category === "Daftar Arsip") buf = assets.list;
-      else if (rowRecord.category === "Form FUPA") buf = assets.fupa;
-      else buf = assets.ibos;
+      if (rowRecord.category === "Daftar Arsip") {
+        buf = assets.list;
+        mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (!name.toLowerCase().endsWith(".xlsx")) name = "Template_Daftar_Arsip_Usul_Musnah.xlsx";
+      } else if (rowRecord.category === "Form FUPA") {
+        buf = assets.fupa;
+        mime = "application/pdf";
+        if (!name.toLowerCase().endsWith(".pdf")) name = "Template_Form_FUPA.pdf";
+      } else {
+        buf = assets.ibos;
+        mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (!name.toLowerCase().endsWith(".xlsx")) name = "Template_Data_Tarikan_iBOS.xlsx";
+      }
     }
     if (!buf && params.kind === "knowledge" && rowRecord) {
       buf = await buildKnowledgeSummaryPdf(rowRecord);
