@@ -16,7 +16,6 @@ export async function listTemplates(u: SessionUser) {
   const rows = await store.list("TEMPLATES");
   return rows
     .filter((t) => u.role === "ADMIN_PAM" || t.status === "Aktif")
-    .filter((t) => (u.role === "ADMIN_SPBU" ? t.category === "Daftar Arsip" : true))
     .sort((a, b) => a.template_id.localeCompare(b.template_id));
 }
 

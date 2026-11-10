@@ -27,6 +27,10 @@ export default async function NewSubmission() {
     activeTpls.find((t) => t.category === "Daftar Arsip") ||
     activeTpls.find((t) => /daftar arsip/i.test(t.name)) ||
     null;
+  const fupaTpl =
+    activeTpls.find((t) => t.category === "Form FUPA") ||
+    activeTpls.find((t) => /fupa|fup/i.test(t.name)) ||
+    null;
 
   return (
     <>
@@ -49,6 +53,11 @@ export default async function NewSubmission() {
         daftarArsipTemplate={
           daftarArsipTpl
             ? { id: daftarArsipTpl.template_id, name: daftarArsipTpl.name }
+            : null
+        }
+        fupaTemplate={
+          fupaTpl
+            ? { id: fupaTpl.template_id, name: fupaTpl.name }
             : null
         }
       />

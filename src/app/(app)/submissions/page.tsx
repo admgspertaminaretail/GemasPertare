@@ -28,6 +28,10 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
     activeTpls.find((t) => t.category === "Daftar Arsip") ||
     activeTpls.find((t) => /daftar arsip/i.test(t.name)) ||
     null;
+  const fupaTpl =
+    activeTpls.find((t) => t.category === "Form FUPA") ||
+    activeTpls.find((t) => /fupa|fup/i.test(t.name)) ||
+    null;
 
   const allowedTabs = u.role === "ADMIN_SPBU" ? ["pengajuan"] : ["pengajuan", "pooling", "memo"];
   const tab = allowedTabs.includes(searchParams.tab || "") ? searchParams.tab! : "pengajuan";
@@ -46,10 +50,21 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {fupaTpl && (
+              <a
+                href={`/api/files/template/${fupaTpl.template_id}?download=1`}
+                className="btn-ghost bg-white ring-1 ring-slate-200 hover:bg-rose-50 hover:text-rose-800 hover:ring-rose-200"
+                title={`Unduh ${fupaTpl.name}`}
+              >
+                <Download className="h-4 w-4 text-prtred" />
+                Template Form FUPA
+              </a>
+            )}
             {daftarArsipTpl && (
               <a
                 href={`/api/files/template/${daftarArsipTpl.template_id}?download=1`}
                 className="btn-ghost bg-white ring-1 ring-slate-200 hover:bg-emerald-50 hover:text-emerald-800 hover:ring-emerald-200"
+                title={`Unduh ${daftarArsipTpl.name}`}
               >
                 <Download className="h-4 w-4 text-prtgreen" />
                 Template Daftar Arsip
@@ -76,6 +91,11 @@ export default async function SubmissionsPage({ searchParams }: { searchParams: 
         daftarArsipTemplate={
           daftarArsipTpl
             ? { id: daftarArsipTpl.template_id, name: daftarArsipTpl.name, version: daftarArsipTpl.version }
+            : null
+        }
+        fupaTemplate={
+          fupaTpl
+            ? { id: fupaTpl.template_id, name: fupaTpl.name, version: fupaTpl.version }
             : null
         }
       />

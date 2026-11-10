@@ -278,9 +278,6 @@ export async function GET(req: Request, { params }: { params: { kind: string; id
       const f = (await store.list("TEMPLATES")).find((r) => r.template_id === params.id);
       if (!f) throw new HttpError(404, "Template tidak ditemukan.");
       if (u.role !== "ADMIN_PAM" && f.status !== "Aktif") throw new HttpError(404, "Template tidak aktif.");
-      if (u.role === "ADMIN_SPBU" && f.category === "Form FUPA") {
-        throw new HttpError(403, "Template ini tidak digunakan pada akun Admin SPBU.");
-      }
       ({ storage_ref: ref, file_name: name, mime } = f);
       isDemoRecord = f.is_demo === "1";
       rowRecord = f;

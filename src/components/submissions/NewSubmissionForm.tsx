@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, Download, Eye, FileSpreadsheet, Loader2, Send } from "lucide-react";
+import { Calendar, Download, Eye, FileSpreadsheet, FileText, Loader2, Send } from "lucide-react";
 import type { IbosExtractItem } from "@/lib/services/ibos";
 import { FileField } from "../ui/FileField";
 import { ConfirmModal } from "../ui/Modal";
@@ -17,6 +17,7 @@ export function NewSubmissionForm({
   maxMb,
   ibosItems = [],
   daftarArsipTemplate,
+  fupaTemplate,
 }: {
   spbuName: string;
   spbuCode: string;
@@ -24,6 +25,7 @@ export function NewSubmissionForm({
   maxMb: number;
   ibosItems?: IbosExtractItem[];
   daftarArsipTemplate?: { id: string; name: string } | null;
+  fupaTemplate?: { id: string; name: string } | null;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -118,15 +120,28 @@ export function NewSubmissionForm({
         <section className="card space-y-3 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-bold text-navy">2. Dokumen pengajuan (wajib)</h2>
-            {daftarArsipTemplate && (
-              <a
-                href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
-                className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Template Daftar Arsip (.xlsx)
-              </a>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {fupaTemplate && (
+                <a
+                  href={`/api/files/template/${fupaTemplate.id}?download=1`}
+                  className="btn-ghost btn-sm bg-rose-50 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-100"
+                  title="Unduh Template Form FUPA (.pdf)"
+                >
+                  <Download className="h-3.5 w-3.5 text-prtred" />
+                  Template Form FUPA (.pdf)
+                </a>
+              )}
+              {daftarArsipTemplate && (
+                <a
+                  href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
+                  className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                  title="Unduh Template Daftar Arsip (.xlsx)"
+                >
+                  <Download className="h-3.5 w-3.5 text-prtgreen" />
+                  Template Daftar Arsip (.xlsx)
+                </a>
+              )}
+            </div>
           </div>
           <FileField
             kind="excel"
@@ -243,14 +258,27 @@ export function NewSubmissionForm({
             </div>
           )}
 
+          {fupaTemplate && (
+            <a
+              href={`/api/files/template/${fupaTemplate.id}?download=1`}
+              className="flex items-center gap-2.5 rounded-xl bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-800 ring-1 ring-rose-200 transition hover:bg-rose-100"
+              title="Unduh Template Form FUPA (.pdf)"
+            >
+              <FileText className="h-4 w-4 shrink-0 text-prtred" />
+              <span className="truncate">{fupaTemplate.name} (.pdf)</span>
+              <Download className="ml-auto h-3.5 w-3.5 shrink-0 text-rose-600" />
+            </a>
+          )}
+
           {daftarArsipTemplate && (
             <a
               href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
               className="flex items-center gap-2.5 rounded-xl bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+              title="Unduh Template Daftar Arsip (.xlsx)"
             >
               <FileSpreadsheet className="h-4 w-4 shrink-0 text-prtgreen" />
               <span className="truncate">{daftarArsipTemplate.name}</span>
-              <Download className="ml-auto h-3.5 w-3.5 shrink-0" />
+              <Download className="ml-auto h-3.5 w-3.5 shrink-0 text-emerald-600" />
             </a>
           )}
         </div>

@@ -27,6 +27,7 @@ export function SubmissionsHub({
   memoable,
   ibosItems = [],
   daftarArsipTemplate,
+  fupaTemplate,
 }: {
   role: string;
   tab: string;
@@ -37,6 +38,7 @@ export function SubmissionsHub({
   memoable: R[];
   ibosItems?: IbosExtractItem[];
   daftarArsipTemplate?: TemplateShortcut;
+  fupaTemplate?: TemplateShortcut;
 }) {
   const [tab, setTab] = useState(initial);
   const [openIbos, setOpenIbos] = useState(false);
@@ -117,8 +119,18 @@ export function SubmissionsHub({
                   href={`/api/files/template/${daftarArsipTemplate.id}?download=1`}
                   className="btn-ghost btn-sm bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100"
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-4 w-4 text-prtgreen" />
                   Template Daftar Arsip (.xlsx)
+                </a>
+              )}
+              {fupaTemplate && (
+                <a
+                  href={`/api/files/template/${fupaTemplate.id}?download=1`}
+                  className="btn-ghost btn-sm bg-rose-50 text-rose-800 ring-1 ring-rose-200 hover:bg-rose-100"
+                  title="Unduh Template Form FUPA (.pdf)"
+                >
+                  <Download className="h-4 w-4 text-prtred" />
+                  Template Form FUPA (.pdf)
                 </a>
               )}
             </div>

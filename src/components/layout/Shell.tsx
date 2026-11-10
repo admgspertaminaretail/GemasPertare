@@ -114,6 +114,12 @@ const SPBU_SECONDARY_NAV: StructuredNavItem[] = [
     sublabel: "Buku catatan & riwayat ID",
     icon: ListOrdered,
   },
+  {
+    href: "/templates",
+    label: "Pusat Template",
+    sublabel: "Unduh formulir & format resmi",
+    icon: FileDown,
+  },
 ];
 
 // Khusus PIC Region: layout terstruktur sesuai peran verifikasi, pooling & monitoring regional
