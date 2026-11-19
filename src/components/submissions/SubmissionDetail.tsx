@@ -204,7 +204,7 @@ export function SubmissionDetail({ data, role }: { data: { submission: R; spbu: 
         {pending && <div className="mb-4 rounded-xl bg-red-50 p-3 text-sm"><b className="text-prtred">Catatan PIC Region:</b> {pending.requested_note}</div>}
         <p className="mb-3 text-xs text-slate-500">Unggah hanya dokumen yang diperbaiki. Dokumen lain tetap memakai versi terakhir. Dokumen lama tetap tersimpan dalam riwayat.</p>
         <div className="space-y-3">
-          <FileField kind="excel" required={false} label="Excel Daftar Arsip Usul Musnah (perbaikan)" accept=".xlsx" files={ex} onChange={setEx} />
+          <FileField kind="excel" required={false} label="Excel Daftar Arsip Usul Musnah (perbaikan)" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" files={ex} onChange={setEx} />
           <FileField kind="pdf" required={false} label="PDF Arsip Usul Musnah (perbaikan)" accept=".pdf" files={fu} onChange={setFu} />
           <FileField kind="image" required={false} label="Foto kondisi arsip (mengganti set foto sebelumnya)" accept=".jpg,.jpeg,.png" multiple files={ph} onChange={setPh} />
           <div><label className="label" htmlFor="rn">Catatan perbaikan</label><textarea id="rn" className="input min-h-[70px]" value={note} onChange={(e) => setNote(e.target.value)} /></div>

@@ -17,6 +17,7 @@ export const SCHEMA = {
   SUBMISSIONS: [
     "submission_id", "spbu_id", "region_id", "submission_date", "description", "status",
     "current_revision", "submitted_by", "created_at", "updated_at", "last_review_note", "is_demo",
+    "drive_url",
   ],
   SUBMISSION_DOCUMENTS: [
     "doc_id", "submission_id", "revision_id", "doc_type", "file_name", "mime", "size",

@@ -49,6 +49,47 @@ export function NewSubmissionForm({
 
   const submit = async () => {
     setBusy(true); setErrors([]);
+
+    // Validasi format file client-side (PDF & Excel .xlsx, .xls, .csv)
+    const errs: string[] = [];
+    const ex = excel[0];
+    if (ex) {
+      const ext = ("." + (ex.name.split(".").pop() || "")).toLowerCase();
+      if (![".xlsx", ".xls", ".csv"].includes(ext)) {
+        errs.push("File Excel harus berformat .xlsx, .xls, atau .csv.");
+      }
+    }
+    const pdf = arsipPdf[0];
+    if (pdf) {
+      const ext = ("." + (pdf.name.split(".").pop() || "")).toLowerCase();
+      if (ext !== ".pdf") {
+        errs.push("Dokumen formulir harus berformat .pdf.");
+      }
+    }
+    for (const p of photos) {
+      const ext = ("." + (p.name.split(".").pop() || "")).toLowerCase();
+      if (![".jpg", ".jpeg", ".png"].includes(ext)) {
+        errs.push(`Foto ${p.name} harus berformat .jpg atau .png.`);
+      }
+    }
+
+    // Validasi batas request payload Vercel Serverless (maks. 4.5 MB)
+    const totalBytes = (ex?.size || 0) + (pdf?.size || 0) + photos.reduce((acc, p) => acc + p.size, 0);
+    const MAX_VERCEL_PAYLOAD = 4.5 * 1024 * 1024;
+    if (totalBytes > MAX_VERCEL_PAYLOAD) {
+      errs.push(
+        `Total ukuran seluruh file (${(totalBytes / 1024 / 1024).toFixed(1)} MB) melebihi batas payload Vercel serverless (4.5 MB). Silakan kompres atau kurangi resolusi foto.`
+      );
+    }
+
+    if (errs.length > 0) {
+      setErrors(errs);
+      setBusy(false);
+      setConfirm(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     const fd = new FormData();
     fd.set("submission_date", date);
     fd.set("description", desc);
@@ -143,18 +184,21 @@ export function NewSubmissionForm({
               )}
             </div>
           </div>
+          <div className="rounded-xl bg-amber-50/70 p-3 text-xs text-amber-800 ring-1 ring-amber-200">
+            <span className="font-semibold">Catatan Batas Payload Vercel (4.5 MB):</span> Seluruh file akan langsung di-stream ke Google Drive dan tautannya dicatat di Google Sheets. Pastikan total ukuran gabungan Excel, PDF, dan Foto berada di bawah 4.5 MB.
+          </div>
           <FileField
             kind="excel"
             label="Excel Daftar Arsip Usul Musnah"
-            hint={`Format .xlsx · maks. ${maxMb} MB · harus berisi minimal 1 baris data`}
-            accept=".xlsx"
+            hint={`Format .xlsx, .xls, .csv · maks. ${maxMb} MB · harus berisi minimal 1 baris data`}
+            accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
             files={excel}
             onChange={setExcel}
           />
           <FileField
             kind="pdf"
             label="PDF Arsip Usul Musnah"
-            hint={`Format .pdf · maks. ${maxMb} MB · dokumen Daftar Arsip Usul Musnah dalam bentuk PDF`}
+            hint={`Format .pdf · maks. ${maxMb} MB · dokumen Formulir Usul Musnah dalam bentuk PDF`}
             accept=".pdf,application/pdf"
             files={arsipPdf}
             onChange={setArsipPdf}

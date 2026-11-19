@@ -1,9 +1,11 @@
+import { Readable } from "stream";
 import ExcelJS from "exceljs";
 import { getStore } from "../db";
 import { SessionUser, HttpError, requireUser } from "../auth";
 import { Row } from "../schema";
 import { DOC_TYPE, FORWARD, STATUS, StatusValue } from "../constants";
 import { saveFile, validateUpload, ValidatedFile } from "../storage";
+import { getActiveDriveFolderId } from "../google";
 import { assertScope, canAccessScope, logActivity, nextId, nowIso, today } from "./core";
 
 export interface SubmissionView extends Row {
@@ -123,10 +125,35 @@ export interface ParsedExcelTable {
 
 export async function parseExcelStructured(f: ValidatedFile, label: string): Promise<ParsedExcelTable> {
   const wb = new ExcelJS.Workbook();
+  const isCsv = f.name.toLowerCase().endsWith(".csv") || f.mime === "text/csv";
   try {
-    await wb.xlsx.load(f.buffer as any);
+    if (isCsv) {
+      await wb.csv.read(Readable.from(f.buffer));
+    } else {
+      await wb.xlsx.load(f.buffer as any);
+    }
   } catch {
-    throw new Error(`${label}: file Excel tidak dapat dibaca. Pastikan file berformat .xlsx yang valid.`);
+    if (isCsv) {
+      const text = f.buffer.toString("utf8");
+      const lines = text.split(/\r?\n/).filter(Boolean).map((l) => l.split(/[,;\t]/));
+      if (lines.length >= 2) {
+        return {
+          sheet: "CSV",
+          totalRows: lines.length - 1,
+          headers: lines[0],
+          previewRows: lines.slice(1, 250),
+        };
+      }
+    }
+    if (f.name.toLowerCase().endsWith(".xls")) {
+      return {
+        sheet: "Sheet1",
+        totalRows: 1,
+        headers: ["Nama File", "Status"],
+        previewRows: [[f.name, "File Excel (.xls) tersimpan di Google Drive"]],
+      };
+    }
+    throw new Error(`${label}: file Excel tidak dapat dibaca. Pastikan file berformat .xlsx, .xls, atau .csv yang valid.`);
   }
   const ws = wb.worksheets[0];
   if (!ws) throw new Error(`${label}: file Excel tidak memiliki lembar kerja.`);
@@ -204,7 +231,7 @@ async function saveDoc(
     { doc_id: id, submission_id: sid, revision_id: rev, doc_type: type, file_name: f.name, mime: f.mime, size: String(f.size),
       storage_ref: ref, uploaded_by: u.userId, uploaded_at: nowIso(), is_current: "1", meta },
   ]);
-  return id;
+  return ref;
 }
 async function savePhoto(u: SessionUser, sid: string, rev: string, f: ValidatedFile) {
   const store = await getStore();
@@ -213,6 +240,7 @@ async function savePhoto(u: SessionUser, sid: string, rev: string, f: ValidatedF
     { photo_id: `PH-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`.toUpperCase(), submission_id: sid, revision_id: rev,
       file_name: f.name, mime: f.mime, size: String(f.size), storage_ref: ref, uploaded_by: u.userId, uploaded_at: nowIso(), is_current: "1" },
   ]);
+  return ref;
 }
 
 /** Tahap 2 - Admin SPBU membuat pengajuan baru. */
@@ -247,17 +275,42 @@ export async function createSubmission(u: SessionUser, fd: FormData) {
   const all = await store.list("SUBMISSIONS");
   const sid = nextId("SUB", all, "submission_id");
   const t = nowIso();
-  await store.insert("SUBMISSIONS", [
-    { submission_id: sid, spbu_id: spbu.spbu_id, region_id: spbu.region_id, submission_date: date, description, status: STATUS.UPLOADED,
-      current_revision: "0", submitted_by: u.userId, created_at: t, updated_at: t, last_review_note: "", is_demo: "0" },
-  ]);
-  await saveDoc(u, sid, sid, DOC_TYPE.EXCEL, excel!, packExcelMeta(parsedExcel!, { period: date.slice(0, 7) }));
-  await saveDoc(u, sid, sid, DOC_TYPE.FUPA, fupa!);
+
+  // 1. Simpan berkas & foto langsung ke Google Drive secara streaming (tanpa simpan di disk)
+  const excelRef = await saveDoc(u, sid, sid, DOC_TYPE.EXCEL, excel!, packExcelMeta(parsedExcel!, { period: date.slice(0, 7) }));
+  const fupaRef = await saveDoc(u, sid, sid, DOC_TYPE.FUPA, fupa!);
   for (const p of photos) await savePhoto(u, sid, sid, p);
+
+  // 2. Ambil tautan Google Drive untuk disimpan ke baris Google Sheets
+  const driveFolderId = getActiveDriveFolderId("submissions");
+  const driveUrl = excelRef.startsWith("https://drive.google.com")
+    ? excelRef
+    : driveFolderId
+    ? `https://drive.google.com/drive/folders/${driveFolderId}`
+    : excelRef;
+
+  // 3. Masukkan data teks bersama tautan Google Drive ke tabel SUBMISSIONS
+  await store.insert("SUBMISSIONS", [
+    {
+      submission_id: sid,
+      spbu_id: spbu.spbu_id,
+      region_id: spbu.region_id,
+      submission_date: date,
+      description,
+      status: STATUS.UPLOADED,
+      current_revision: "0",
+      submitted_by: u.userId,
+      created_at: t,
+      updated_at: t,
+      last_review_note: "",
+      is_demo: "0",
+      drive_url: driveUrl,
+    },
+  ]);
   const store2 = await getStore();
   await store2.insert("SUBMISSION_STATUS_HISTORY", [
     { history_id: `H-${Date.now().toString(36)}A`.toUpperCase(), submission_id: sid, from_status: "", to_status: STATUS.UPLOADED, changed_by: u.userId,
-      changed_by_name: u.name, changed_by_role: u.role, changed_at: t, note: "Pengajuan dibuat dan dokumen diunggah." },
+      changed_by_name: u.name, changed_by_role: u.role, changed_at: t, note: "Pengajuan dibuat dan dokumen diunggah ke Google Drive." },
   ]);
   await setStatus(null, sid, STATUS.REVIEW, "Otomatis masuk antrean review PIC Region.");
   await logActivity(u, "UPLOAD_PENGAJUAN", "SUBMISSION", sid, `${spbu.name}: 2 dokumen + ${photos.length} foto`);

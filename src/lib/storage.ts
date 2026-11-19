@@ -8,21 +8,47 @@ import { getLocalSnapshot, getStore } from "./db";
 
 export type FileKind = "excel" | "pdf" | "image" | "document";
 
-const RULES: Record<FileKind, { ext: string[]; mime: string }> = {
-  excel: { ext: [".xlsx"], mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
-  pdf: { ext: [".pdf"], mime: "application/pdf" },
-  image: { ext: [".jpg", ".jpeg", ".png"], mime: "image/jpeg" },
-  document: { ext: [".pdf", ".xlsx", ".docx"], mime: "application/octet-stream" },
+const RULES: Record<FileKind, { ext: string[]; mime: string[] }> = {
+  excel: {
+    ext: [".xlsx", ".xls", ".csv"],
+    mime: [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "text/csv",
+      "application/csv",
+      "text/plain",
+    ],
+  },
+  pdf: { ext: [".pdf"], mime: ["application/pdf"] },
+  image: { ext: [".jpg", ".jpeg", ".png"], mime: ["image/jpeg", "image/png"] },
+  document: {
+    ext: [".pdf", ".xlsx", ".xls", ".csv", ".docx"],
+    mime: ["application/octet-stream", "application/pdf"],
+  },
 };
 
 export const MAX_FILE_BYTES = Number(process.env.MAX_FILE_MB || 4) * 1024 * 1024;
 
-function sniff(buf: Buffer): "pdf" | "zip" | "jpg" | "png" | "unknown" {
+function sniff(buf: Buffer): "pdf" | "zip" | "xls" | "csv" | "jpg" | "png" | "unknown" {
   if (buf.length < 4) return "unknown";
   if (buf.slice(0, 4).toString() === "%PDF") return "pdf";
   if (buf[0] === 0x50 && buf[1] === 0x4b) return "zip";
+  if (buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0) return "xls";
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpg";
   if (buf[0] === 0x89 && buf.slice(1, 4).toString() === "PNG") return "png";
+
+  const sample = buf.slice(0, Math.min(buf.length, 512));
+  let isText = true;
+  for (let i = 0; i < sample.length; i++) {
+    const b = sample[i];
+    if (b === 0 || (b < 9 && b !== 0) || (b > 13 && b < 32)) {
+      isText = false;
+      break;
+    }
+  }
+  if (isText && (sample.includes(44) || sample.includes(59) || sample.includes(9) || sample.includes(10))) {
+    return "csv";
+  }
   return "unknown";
 }
 
@@ -33,7 +59,7 @@ export interface ValidatedFile {
   size: number;
 }
 
-/** Validasi ekstensi, ukuran, dan magic-bytes. Melempar Error berpesan Indonesia jika tidak valid. */
+/** Validasi ekstensi, ukuran, MIME type, dan magic-bytes. Melempar Error berpesan Indonesia jika tidak valid. */
 export async function validateUpload(file: File | null | undefined, kind: FileKind, label: string): Promise<ValidatedFile> {
   if (!file || typeof file === "string" || !file.size) throw new Error(`${label} wajib diunggah.`);
   if (file.size > MAX_FILE_BYTES)
@@ -41,17 +67,31 @@ export async function validateUpload(file: File | null | undefined, kind: FileKi
   const rule = RULES[kind];
   const ext = path.extname(file.name || "").toLowerCase();
   if (!rule.ext.includes(ext)) throw new Error(`${label}: format harus ${rule.ext.join("/").toUpperCase()}.`);
+
+  // Validasi MIME type browser jika dikirimkan
+  if (file.type && file.type !== "application/octet-stream") {
+    if (!rule.mime.includes(file.type)) {
+      if (!(ext === ".csv" && (file.type === "text/plain" || file.type === "text/csv"))) {
+        throw new Error(`${label}: tipe file tidak sesuai (${file.type}).`);
+      }
+    }
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer());
   const t = sniff(buffer);
   const ok =
     (ext === ".pdf" && t === "pdf") ||
     ((ext === ".xlsx" || ext === ".docx") && t === "zip") ||
+    (ext === ".xls" && (t === "xls" || t === "zip" || t === "csv")) ||
+    (ext === ".csv" && t === "csv") ||
     ((ext === ".jpg" || ext === ".jpeg") && t === "jpg") ||
     (ext === ".png" && t === "png");
   if (!ok) throw new Error(`${label}: isi file tidak sesuai dengan format ${ext.toUpperCase()}.`);
   const mime =
     ext === ".pdf" ? "application/pdf"
-    : ext === ".xlsx" ? RULES.excel.mime
+    : ext === ".xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    : ext === ".xls" ? "application/vnd.ms-excel"
+    : ext === ".csv" ? "text/csv"
     : ext === ".docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     : ext === ".png" ? "image/png"
     : "image/jpeg";
@@ -146,12 +186,21 @@ export async function saveFile(
         const res = await drive.files.create({
           requestBody: { name: `${prefix}${safe}`, parents: [parentId] },
           media: { mimeType: f.mime, body: Readable.from(f.buffer) },
-          fields: "id, webViewLink",
+          fields: "id, webViewLink, webContentLink",
           supportsAllDrives: true,
         });
         const driveId = String(res.data.id);
         storageRef = `https://drive.google.com/file/d/${driveId}/view`;
         fileUrl = res.data.webViewLink || storageRef;
+
+        // Berikan izin akses baca (view) agar tautan Google Drive bisa langsung dibuka dari Google Sheets
+        try {
+          await drive.permissions.create({
+            fileId: driveId,
+            requestBody: { role: "reader", type: "anyone" },
+            supportsAllDrives: true,
+          });
+        } catch { /* abaikan jika izin folder Drive sudah otomatis mewarisi */ }
       } catch (err: any) {
         const msg = String(err?.response?.data?.error?.message || err?.message || err);
         if (/storageQuotaExceeded|do not have storage quota/i.test(msg)) {
