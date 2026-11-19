@@ -204,6 +204,11 @@ export async function saveFile(
       } catch (err: any) {
         const msg = String(err?.response?.data?.error?.message || err?.message || err);
         if (/storageQuotaExceeded|do not have storage quota/i.test(msg)) {
+          if (process.env.VERCEL) {
+            throw new Error(
+              "Gagal mengunggah ke Google Drive: Service Account Google Cloud dibatasi kuota 0-byte pada akun Gmail pribadi. Pastikan Google Apps Script Bridge telah diperbarui dan aktif."
+            );
+          }
           // Akun Gmail pribadi membatasi unggahan file biner oleh Service Account (0-byte quota);
           // simpan file fisik ke folder uploads server sementara indeks & database utama tetap tercatat di Google Sheets.
           const dir = path.join(UPLOAD_DIR, folder);
@@ -265,17 +270,43 @@ export async function readFile(ref: string): Promise<Buffer> {
   }
 
   if (driveId) {
-    const { drive } = getGoogleClients();
-    const res = await drive.files.get(
-      { fileId: driveId, alt: "media", supportsAllDrives: true },
-      { responseType: "arraybuffer" }
-    );
-    return Buffer.from(res.data as ArrayBuffer);
+    // 1. Coba unduh via Apps Script bridge jika URL aktif (menghindari limitasi hak akses Service Account)
+    const appsScriptUrl = getActiveAppsScriptUrl();
+    if (appsScriptUrl) {
+      try {
+        const bridgeRes = await fetch(`${appsScriptUrl}?fileId=${encodeURIComponent(driveId)}`, { redirect: "follow" });
+        if (bridgeRes.ok) {
+          const text = await bridgeRes.text();
+          if (text && !text.startsWith("error:")) {
+            return Buffer.from(text, "base64");
+          }
+        }
+      } catch { /* lanjutkan ke direct drive */ }
+    }
+
+    // 2. Coba via Google Drive API Service Account
+    try {
+      const { drive } = getGoogleClients();
+      const res = await drive.files.get(
+        { fileId: driveId, alt: "media", supportsAllDrives: true },
+        { responseType: "arraybuffer" }
+      );
+      return Buffer.from(res.data as ArrayBuffer);
+    } catch (driveErr) {
+      // 3. Fallback unduh langsung dari link publik Google Drive
+      const downloadUrl = `https://drive.google.com/uc?export=download&id=${driveId}`;
+      const res = await fetch(downloadUrl);
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+      throw driveErr;
+    }
   }
   if (ref.startsWith("local:")) {
     const rel = ref.slice(6);
     const full = path.resolve(UPLOAD_DIR, rel);
     if (!full.startsWith(path.resolve(UPLOAD_DIR))) throw new Error("Path tidak valid");
+    if (!fs.existsSync(full)) {
+      throw new Error(`File '${path.basename(full)}' tidak ditemukan di penyimpanan server (file sementara Vercel telah dihapus). Harap perbarui kode Google Apps Script dan unggah ulang berkas.`);
+    }
     return fs.readFileSync(full);
   }
   throw new Error("storage_ref tidak dikenal: " + ref);
