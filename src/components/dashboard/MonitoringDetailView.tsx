@@ -429,48 +429,21 @@ export function MonitoringDetailView({
       )}
 
       {/* Pemilih Poin Informasi Dashboard */}
-      <div className="card space-y-4 p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-2">
-          {spbuGroup.length > 0 && (
-            <div>
-              <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Poin Unit SPBU (Unik)
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {spbuGroup.map((v) => {
-                  const active = v.key === currentView.key;
-                  const cnt = countFor(v);
-                  return (
-                    <button
-                      key={v.key}
-                      type="button"
-                      onClick={() => selectView(v.key)}
-                      className={`flex items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-left text-xs font-bold ring-1 transition ${
-                        active ? v.activeCls : "bg-white text-navy ring-slate-200/80 hover:bg-softblue/50 hover:ring-brand/30"
-                      }`}
-                    >
-                      <span className="inline-flex min-w-0 items-center gap-2">
-                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/20 text-white" : v.tone}`}>
-                          {v.icon}
-                        </span>
-                        <span className="truncate">{v.label}</span>
-                      </span>
-                      <span className={`shrink-0 rounded-lg px-2 py-0.5 text-sm font-extrabold tabular-nums ${active ? "bg-white/20 text-white" : "bg-slate-100 text-navy"}`}>
-                        {cnt}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
+      <div className="card space-y-6 p-4 sm:p-6">
+        {/* GRUP 1: POIN UNIT SPBU (UNIK) */}
+        {spbuGroup.length > 0 && (
           <div>
-            <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Poin Transaksi Pengajuan &amp; Status
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Poin Unit SPBU (Fisik)
+                </h3>
+                <p className="text-[11px] text-slate-500">Agregat status berdasarkan unit fisik SPBU di wilayah</p>
+              </div>
+              <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">Pilih kartu untuk memfilter tabel</span>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {subGroup.map((v) => {
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+              {spbuGroup.map((v) => {
                 const active = v.key === currentView.key;
                 const cnt = countFor(v);
                 return (
@@ -478,32 +451,85 @@ export function MonitoringDetailView({
                     key={v.key}
                     type="button"
                     onClick={() => selectView(v.key)}
-                    className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-bold ring-1 transition ${
-                      active ? v.activeCls : "bg-white text-navy ring-slate-200/80 hover:bg-softblue/50 hover:ring-brand/30"
+                    className={`group relative flex flex-col justify-between rounded-2xl p-4 text-left transition ring-1 ${
+                      active
+                        ? `${v.activeCls} shadow-md`
+                        : "bg-white text-navy ring-slate-200 hover:bg-softblue/30 hover:ring-brand/40 hover:shadow-xs"
                     }`}
                   >
-                    <span className="inline-flex min-w-0 items-center gap-2">
-                      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${active ? "bg-white/20 text-white" : v.tone}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${active ? "bg-white/20 text-white" : v.tone}`}>
                         {v.icon}
                       </span>
-                      <span className="truncate">{v.label}</span>
-                    </span>
-                    <span className={`shrink-0 rounded-lg px-2 py-0.5 text-sm font-extrabold tabular-nums ${active ? "bg-white/20 text-white" : "bg-slate-100 text-navy"}`}>
-                      {cnt}
-                    </span>
+                      <span className={`rounded-lg px-2.5 py-0.5 text-base font-extrabold tabular-nums ${active ? "bg-white/20 text-white" : "bg-slate-100 text-navy"}`}>
+                        {cnt}
+                      </span>
+                    </div>
+                    <div className="mt-3 text-xs font-bold leading-snug">
+                      {v.label}
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
+        )}
+
+        {/* GRUP 2: POIN TRANSAKSI PENGAJUAN & TAHAPAN STATUS */}
+        <div className={spbuGroup.length > 0 ? "border-t border-slate-100 pt-5" : ""}>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Poin Transaksi Pengajuan &amp; Tahapan Status
+              </h3>
+              <p className="text-[11px] text-slate-500">Urutan tahapan transaksi usul musnah dari pengajuan awal hingga MEMO</p>
+            </div>
+            <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">Alur proses usul musnah</span>
+          </div>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+            {subGroup.map((v) => {
+              const active = v.key === currentView.key;
+              const cnt = countFor(v);
+              return (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => selectView(v.key)}
+                  className={`group relative flex flex-col justify-between rounded-2xl p-4 text-left transition ring-1 ${
+                    active
+                      ? `${v.activeCls} shadow-md`
+                      : "bg-white text-navy ring-slate-200 hover:bg-softblue/30 hover:ring-brand/40 hover:shadow-xs"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${active ? "bg-white/20 text-white" : v.tone}`}>
+                      {v.icon}
+                    </span>
+                    <span className={`rounded-lg px-2.5 py-0.5 text-base font-extrabold tabular-nums ${active ? "bg-white/20 text-white" : "bg-slate-100 text-navy"}`}>
+                      {cnt}
+                    </span>
+                  </div>
+                  <div className="mt-3 text-xs font-bold leading-snug">
+                    {v.label}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Kategori rincian grafik lanjutan */}
-        <div className="border-t border-slate-100 pt-3">
-          <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            Rincian Segmen Grafik Lanjutan (Kumulatif Pooling, Penerusan MEMO, &amp; Status Spesifik)
+        {/* GRUP 3: RINCIAN SEGMEN GRAFIK LANJUTAN & KUMULATIF */}
+        <div className="border-t border-slate-100 pt-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Segmen Grafik Lanjutan &amp; Metrik Kumulatif
+              </h3>
+              <p className="text-[11px] text-slate-500">Filter cepat untuk membedah data berdasarkan irisan grafik monitoring</p>
+            </div>
+            <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">Filter tambahan</span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             {chartGroup.map((v) => {
               const active = v.key === currentView.key;
               const cnt = countFor(v);
@@ -512,12 +538,21 @@ export function MonitoringDetailView({
                   key={v.key}
                   type="button"
                   onClick={() => selectView(v.key)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold ring-1 transition ${
-                    active ? v.activeCls : "bg-slate-50 text-slate-700 ring-slate-200 hover:bg-softblue/50 hover:text-navy"
+                  className={`group inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold ring-1 transition ${
+                    active
+                      ? `${v.activeCls} shadow-sm`
+                      : "bg-slate-50/90 text-slate-700 ring-slate-200 hover:bg-white hover:text-navy hover:ring-brand/40 hover:shadow-xs"
                   }`}
                 >
-                  {v.label}
-                  <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums ${active ? "bg-white/20 text-white" : "bg-white text-navy ring-1 ring-slate-200/70"}`}>
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${active ? "bg-white/20 text-white" : v.tone}`}>
+                    {v.icon}
+                  </span>
+                  <span>{v.label}</span>
+                  <span
+                    className={`ml-0.5 rounded-md px-2 py-0.5 text-xs font-extrabold tabular-nums ${
+                      active ? "bg-white/25 text-white" : "bg-white text-navy ring-1 ring-slate-200"
+                    }`}
+                  >
                     {cnt}
                   </span>
                 </button>
