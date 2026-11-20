@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Ban, Calendar, CalendarCheck, ChevronDown, ChevronUp, Download, Eye, FileSpreadsheet, Layers, Loader2, Send } from "lucide-react";
+import { Ban, Calendar, CalendarCheck, ChevronDown, ChevronUp, Download, Eye, FileSpreadsheet, FileText, Layers, Loader2, Send } from "lucide-react";
 import type { IbosExtractItem } from "@/lib/services/ibos";
 import { SubmissionTable } from "./SubmissionTable";
 import { MonthlyIbosModal } from "./MonthlyIbosModal";
@@ -10,6 +10,7 @@ import { DataTable } from "../ui/DataTable";
 import { Empty, StatusBadge } from "../ui/kit";
 import { ConfirmModal, Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
+import { FileField } from "../ui/FileField";
 import { api } from "@/lib/client";
 import { fmtDate, fmtPeriod, todayStr } from "@/lib/format";
 import { FORWARD } from "@/lib/constants";
@@ -160,6 +161,7 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
   const [fupa, setFupa] = useState("");
   const [date, setDate] = useState(todayStr());
   const [notes, setNotes] = useState("");
+  const [docFiles, setDocFiles] = useState<File[]>([]);
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -170,9 +172,19 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
   const create = async () => {
     setBusy(true);
     try {
-      await api("/api/poolings", { fupa_number: fupa, pooling_date: date, submission_ids: sel, notes });
+      if (docFiles.length > 0) {
+        const fd = new FormData();
+        fd.append("fupa_number", fupa);
+        fd.append("pooling_date", date);
+        fd.append("notes", notes);
+        fd.append("submission_ids", JSON.stringify(sel));
+        fd.append("file", docFiles[0]);
+        await api("/api/poolings", fd);
+      } else {
+        await api("/api/poolings", { fupa_number: fupa, pooling_date: date, submission_ids: sel, notes });
+      }
       toast("success", `Pooling dibuat dengan ${sel.length} pengajuan.`);
-      setSel([]); setFupa(""); setNotes(""); setConfirm(false); router.refresh();
+      setSel([]); setFupa(""); setNotes(""); setDocFiles([]); setConfirm(false); router.refresh();
     } catch (e: any) { toast("error", e.message); setConfirm(false); } finally { setBusy(false); }
   };
   const doCancel = async () => {
@@ -209,11 +221,26 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
               </table>
             </div>
           )}
-          <div className="grid gap-3 border-t border-slate-100 bg-cloud/60 p-4 md:grid-cols-[1fr_180px_1fr_auto] md:items-end">
-            <div><label className="label" htmlFor="fn">Nomor FUPA Regional <span className="text-prtred">*</span></label><input id="fn" className="input" placeholder="mis. FUPA/R1/001/2026" value={fupa} onChange={(e) => setFupa(e.target.value)} /></div>
-            <div><label className="label" htmlFor="fd">Tanggal pooling <span className="text-prtred">*</span></label><input id="fd" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div><label className="label" htmlFor="fnt">Catatan</label><input id="fnt" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-            <button className="btn-primary" disabled={!sel.length || !fupa.trim() || !date} onClick={() => setConfirm(true)}><Layers className="h-4 w-4" />Buat Pooling ({sel.length})</button>
+          <div className="space-y-3 border-t border-slate-100 bg-cloud/60 p-4">
+            <div className="grid gap-3 md:grid-cols-[1fr_180px_1fr]">
+              <div><label className="label" htmlFor="fn">Nomor FUPA Regional <span className="text-prtred">*</span></label><input id="fn" className="input" placeholder="mis. FUPA/R1/001/2026" value={fupa} onChange={(e) => setFupa(e.target.value)} /></div>
+              <div><label className="label" htmlFor="fd">Tanggal pooling <span className="text-prtred">*</span></label><input id="fd" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+              <div><label className="label" htmlFor="fnt">Catatan</label><input id="fnt" className="input" placeholder="Catatan tambahan (opsional)" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="w-full md:max-w-xl">
+                <FileField
+                  kind="pdf"
+                  required={false}
+                  label="Dokumen Kelengkapan (opsional)"
+                  hint="Format .pdf · dokumen kelengkapan berkas pooling regional"
+                  accept=".pdf,application/pdf"
+                  files={docFiles}
+                  onChange={setDocFiles}
+                />
+              </div>
+              <button className="btn-primary shrink-0" disabled={!sel.length || !fupa.trim() || !date} onClick={() => setConfirm(true)}><Layers className="h-4 w-4" />Buat Pooling ({sel.length})</button>
+            </div>
           </div>
         </section>
       )}
@@ -232,6 +259,18 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
                   </div>
                   <span className={`chip ${p.status === "AKTIF" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>{p.status === "AKTIF" ? "Aktif" : "Dibatalkan"}</span>
                   {p.memo_number && <span className="chip bg-navy text-white ring-navy">{p.memo_number}</span>}
+                  {p.storage_ref && (
+                    <a
+                      href={`/api/files/pooling/${p.pooling_id}?download=1`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-ghost btn-sm text-brand ring-1 ring-brand/20 bg-softblue/40 hover:bg-softblue"
+                      title={p.doc_name || "Unduh Dokumen Kelengkapan"}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span className="hidden sm:inline">Dokumen Kelengkapan</span>
+                    </a>
+                  )}
                   <button className="btn-ghost btn-sm" onClick={() => setOpen(open === p.pooling_id ? null : p.pooling_id)}>Detail anggota{open === p.pooling_id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</button>
                   {canEdit && p.status === "AKTIF" && !p.memo_id && <button className="btn-ghost btn-sm text-prtred" onClick={() => { setCancel(p); setReason(""); }}><Ban className="h-4 w-4" />Batalkan</button>}
                 </div>
@@ -239,6 +278,15 @@ function PoolingTab({ canEdit, poolings, poolable }: { canEdit: boolean; pooling
                   <div className="mt-3 border-t border-slate-100 pt-3">
                     {p.notes && <p className="mb-2 text-xs text-slate-500">Catatan: {p.notes}</p>}
                     {p.status !== "AKTIF" && <p className="mb-2 text-xs text-prtred">Dibatalkan {fmtDate(p.cancelled_at)}: {p.cancel_reason}</p>}
+                    {p.storage_ref && (
+                      <div className="mb-3 flex items-center gap-2 rounded-lg bg-softblue/40 px-3 py-2 text-xs text-brand ring-1 ring-brand/15">
+                        <FileText className="h-4 w-4 shrink-0" />
+                        <span className="text-slate-600">Dokumen kelengkapan:</span>
+                        <a href={`/api/files/pooling/${p.pooling_id}?download=1`} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
+                          {p.doc_name || "Dokumen_Kelengkapan.pdf"}
+                        </a>
+                      </div>
+                    )}
                     <ul className="grid gap-2 sm:grid-cols-2">
                       {p.members.map((m: R) => <li key={m.submission_id} className="flex items-center justify-between gap-2 rounded-xl bg-cloud px-3 py-2 text-sm"><span><Link href={`/submissions/${m.submission_id}`} className="font-semibold text-brand hover:underline">{m.submission_id}</Link> · {m.spbu_name}</span><StatusBadge status={m.status} /></li>)}
                       {p.members.length === 0 && <li className="text-xs text-slate-400">Tidak ada anggota aktif.</li>}
@@ -269,6 +317,7 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
   const [num, setNum] = useState("");
   const [date, setDate] = useState(todayStr());
   const [notes, setNotes] = useState("");
+  const [docFiles, setDocFiles] = useState<File[]>([]);
   const [sel, setSel] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -277,8 +326,21 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
 
   const create = async () => {
     setBusy(true);
-    try { await api("/api/memos", { memo_number: num, memo_date: date, pooling_ids: sel, notes }); toast("success", "MEMO tercatat. Status pengajuan menjadi Sudah Di-Memo."); setNum(""); setNotes(""); setSel([]); setConfirm(false); router.refresh(); }
-    catch (e: any) { toast("error", e.message); setConfirm(false); } finally { setBusy(false); }
+    try {
+      if (docFiles.length > 0) {
+        const fd = new FormData();
+        fd.append("memo_number", num);
+        fd.append("memo_date", date);
+        fd.append("notes", notes);
+        fd.append("pooling_ids", JSON.stringify(sel));
+        fd.append("file", docFiles[0]);
+        await api("/api/memos", fd);
+      } else {
+        await api("/api/memos", { memo_number: num, memo_date: date, pooling_ids: sel, notes });
+      }
+      toast("success", "MEMO tercatat. Status pengajuan menjadi Sudah Di-Memo.");
+      setNum(""); setNotes(""); setSel([]); setDocFiles([]); setConfirm(false); router.refresh();
+    } catch (e: any) { toast("error", e.message); setConfirm(false); } finally { setBusy(false); }
   };
   const saveFwd = async () => {
     if (!fwd) return;
@@ -306,11 +368,24 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
                 </div>
               )}
             </div>
-            <div className="grid gap-3 md:grid-cols-[1fr_180px_1fr_auto] md:items-end">
-              <div><label className="label" htmlFor="mn">Nomor MEMO <span className="text-prtred">*</span></label><input id="mn" className="input" value={num} onChange={(e) => setNum(e.target.value)} /></div>
+            <div className="grid gap-3 md:grid-cols-[1fr_180px_1fr]">
+              <div><label className="label" htmlFor="mn">Nomor MEMO <span className="text-prtred">*</span></label><input id="mn" className="input" placeholder="mis. MEMO/REG1/001/2026" value={num} onChange={(e) => setNum(e.target.value)} /></div>
               <div><label className="label" htmlFor="md">Tanggal MEMO <span className="text-prtred">*</span></label><input id="md" type="date" max={todayStr()} className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-              <div><label className="label" htmlFor="mt">Keterangan</label><input id="mt" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-              <button className="btn-primary" disabled={!sel.length || !num.trim() || !date} onClick={() => setConfirm(true)}><Send className="h-4 w-4" />Catat MEMO</button>
+              <div><label className="label" htmlFor="mt">Keterangan</label><input id="mt" className="input" placeholder="Keterangan (opsional)" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="w-full md:max-w-xl">
+                <FileField
+                  kind="pdf"
+                  required={false}
+                  label="Dokumen Kelengkapan (opsional)"
+                  hint="Format .pdf · dokumen kelengkapan berkas MEMO regional"
+                  accept=".pdf,application/pdf"
+                  files={docFiles}
+                  onChange={setDocFiles}
+                />
+              </div>
+              <button className="btn-primary shrink-0" disabled={!sel.length || !num.trim() || !date} onClick={() => setConfirm(true)}><Send className="h-4 w-4" />Catat MEMO</button>
             </div>
           </div>
         </section>
@@ -326,6 +401,21 @@ function MemoTab({ canEdit, memos, memoable }: { canEdit: boolean; memos: R[]; m
             { key: "region_name", header: "Region" },
             { key: "fupa", header: "FUPA Tercakup", render: (m) => m.poolings.map((p: R) => p.fupa_number).join(", "), value: (m) => m.poolings.map((p: R) => p.fupa_number).join(", ") },
             { key: "subs", header: "Pengajuan", align: "right", render: (m) => <span title={m.submissions.map((s: R) => `${s.submission_id} ${s.spbu_name}`).join("\n")}>{m.submissions.length} <span className="text-xs text-slate-400">({new Set(m.submissions.map((s: R) => s.spbu_name)).size} SPBU)</span></span>, value: (m) => m.submissions.length },
+            {
+              key: "doc",
+              header: "Dokumen",
+              render: (m: R) => m.storage_ref ? (
+                <a
+                  href={`/api/files/memo/${m.memo_id}?download=1`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
+                  title={m.doc_name || "Unduh Dokumen Kelengkapan"}
+                >
+                  <FileText className="h-3.5 w-3.5" />Dokumen Kelengkapan
+                </a>
+              ) : <span className="text-xs text-slate-400">-</span>,
+            },
             { key: "fwd", header: "Diteruskan ke PAM", render: (m) => { const f = m.forwarding; const yes = f?.status === FORWARD.YES; return <span className={`chip ${yes ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-amber-50 text-amber-800 ring-amber-200"}`}>{yes ? `Sudah · ${fmtDate(f.forwarded_date)}` : "Belum Diteruskan"}</span>; }, value: (m) => m.forwarding?.status || FORWARD.NO },
             ...(canEdit ? [{ key: "act", header: "Aksi", render: (m: R) => <button className="btn-ghost btn-sm" onClick={() => { setFwd(m); setFs({ status: m.forwarding?.status || FORWARD.YES, date: m.forwarding?.forwarded_date || todayStr(), notes: m.forwarding?.notes || "" }); }}><CalendarCheck className="h-4 w-4" />Penerusan PAM</button> }] : []),
           ]} />

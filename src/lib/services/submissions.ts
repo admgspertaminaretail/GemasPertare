@@ -410,7 +410,7 @@ export async function listPoolable(u: SessionUser) {
   return subs;
 }
 
-export async function createPooling(u: SessionUser, input: { fupa_number: string; pooling_date: string; submission_ids: string[]; notes?: string }) {
+export async function createPooling(u: SessionUser, input: { fupa_number: string; pooling_date: string; submission_ids: string[]; notes?: string; file?: File }) {
   if (u.role !== "ADMIN_REGION") throw new HttpError(403, "Hanya PIC Region yang dapat membuat pooling.");
   const store = await getStore();
   const fupa = (input.fupa_number || "").trim();
@@ -431,9 +431,22 @@ export async function createPooling(u: SessionUser, input: { fupa_number: string
   }
   const poolId = nextId("POOL", pools, "pooling_id");
   const t = nowIso();
+
+  let docName = "";
+  let storageRef = "";
+  if (input.file && typeof input.file !== "string" && input.file.size > 0) {
+    const v = await validateUpload(input.file, "pdf", "Dokumen Kelengkapan");
+    docName = v.name;
+    storageRef = await saveFile(v, `poolings/${poolId}`, {
+      title: `Dokumen Kelengkapan Pooling — FUPA ${fupa}`,
+      entityId: poolId,
+      uploadedBy: u.name,
+    });
+  }
+
   await store.insert("REGIONAL_POOLINGS", [
     { pooling_id: poolId, fupa_number: fupa, pooling_date: input.pooling_date, region_id: u.regionId, notes: (input.notes || "").trim(),
-      status: "AKTIF", created_by: u.userId, created_at: t, cancelled_at: "", cancel_reason: "" },
+      status: "AKTIF", created_by: u.userId, created_at: t, cancelled_at: "", cancel_reason: "", doc_name: docName, storage_ref: storageRef },
   ]);
   await store.insert("REGIONAL_POOLING_ITEMS", chosen.map((s, i) => ({
     item_id: `PI-${Date.now().toString(36)}${i}`.toUpperCase(), pooling_id: poolId, submission_id: s!.submission_id, spbu_id: s!.spbu_id, status: "AKTIF", added_at: t,
@@ -491,7 +504,7 @@ export async function listMemoablePoolings(u: SessionUser) {
   return (await listPoolings(u)).filter((p) => p.status === "AKTIF" && !used.has(p.pooling_id));
 }
 
-export async function createMemo(u: SessionUser, input: { memo_number: string; memo_date: string; pooling_ids: string[]; notes?: string }) {
+export async function createMemo(u: SessionUser, input: { memo_number: string; memo_date: string; pooling_ids: string[]; notes?: string; file?: File }) {
   if (u.role !== "ADMIN_REGION") throw new HttpError(403, "Hanya PIC Region yang dapat mencatat MEMO.");
   const store = await getStore();
   const num = (input.memo_number || "").trim();
@@ -510,7 +523,20 @@ export async function createMemo(u: SessionUser, input: { memo_number: string; m
   }
   const memoId = nextId("MEMO", memos, "memo_id");
   const t = nowIso();
-  await store.insert("REGIONAL_MEMOS", [{ memo_id: memoId, memo_number: num, memo_date: input.memo_date, region_id: u.regionId, notes: (input.notes || "").trim(), created_by: u.userId, created_at: t }]);
+
+  let docName = "";
+  let storageRef = "";
+  if (input.file && typeof input.file !== "string" && input.file.size > 0) {
+    const v = await validateUpload(input.file, "pdf", "Dokumen Kelengkapan");
+    docName = v.name;
+    storageRef = await saveFile(v, `memos/${memoId}`, {
+      title: `Dokumen Kelengkapan MEMO — ${num}`,
+      entityId: memoId,
+      uploadedBy: u.name,
+    });
+  }
+
+  await store.insert("REGIONAL_MEMOS", [{ memo_id: memoId, memo_number: num, memo_date: input.memo_date, region_id: u.regionId, notes: (input.notes || "").trim(), created_by: u.userId, created_at: t, doc_name: docName, storage_ref: storageRef }]);
   await store.insert("MEMO_POOLING_ITEMS", pids.map((p, i) => ({ id: `MP-${Date.now().toString(36)}${i}`.toUpperCase(), memo_id: memoId, pooling_id: p })));
   await store.insert("MEMO_FORWARDING", [{ forwarding_id: `FWD-${memoId.split("-")[1]}`, memo_id: memoId, status: FORWARD.NO, forwarded_date: "", notes: "", updated_by: u.userId, updated_at: t }]);
   for (const id of pids)

@@ -288,6 +288,22 @@ export async function GET(req: Request, { params }: { params: { kind: string; id
       name = f.file_name || `${(f.title || f.doc_id).replace(/[^\w.\- ()]/g, "_")}.pdf`;
       mime = f.mime || "application/pdf";
       rowRecord = f;
+    } else if (params.kind === "pooling") {
+      const f = (await store.list("REGIONAL_POOLINGS")).find((r) => r.pooling_id === params.id);
+      if (!f || !f.storage_ref) throw new HttpError(404, "Dokumen kelengkapan pooling tidak ditemukan.");
+      assertScope(u, f.region_id);
+      ref = f.storage_ref;
+      name = f.doc_name || `Dokumen_Kelengkapan_Pooling_${(f.fupa_number || f.pooling_id).replace(/[^\w.\- ()]/g, "_")}.pdf`;
+      mime = "application/pdf";
+      rowRecord = f;
+    } else if (params.kind === "memo") {
+      const f = (await store.list("REGIONAL_MEMOS")).find((r) => r.memo_id === params.id);
+      if (!f || !f.storage_ref) throw new HttpError(404, "Dokumen kelengkapan MEMO tidak ditemukan.");
+      assertScope(u, f.region_id);
+      ref = f.storage_ref;
+      name = f.doc_name || `Dokumen_Kelengkapan_MEMO_${(f.memo_number || f.memo_id).replace(/[^\w.\- ()]/g, "_")}.pdf`;
+      mime = "application/pdf";
+      rowRecord = f;
     } else if (params.kind === "index") {
       if (u.role !== "ADMIN_PAM") throw new HttpError(403, "Hanya Admin PAM yang dapat mengakses indeks berkas.");
       const f = (await store.list("FILE_INDEX")).find((r) => r.file_id === params.id);

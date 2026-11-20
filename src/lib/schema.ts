@@ -38,10 +38,12 @@ export const SCHEMA = {
   REGIONAL_POOLINGS: [
     "pooling_id", "fupa_number", "pooling_date", "region_id", "notes", "status",
     "created_by", "created_at", "cancelled_at", "cancel_reason",
+    "doc_name", "storage_ref",
   ],
   REGIONAL_POOLING_ITEMS: ["item_id", "pooling_id", "submission_id", "spbu_id", "status", "added_at"],
   REGIONAL_MEMOS: [
     "memo_id", "memo_number", "memo_date", "region_id", "notes", "created_by", "created_at",
+    "doc_name", "storage_ref",
   ],
   MEMO_POOLING_ITEMS: ["id", "memo_id", "pooling_id"],
   MEMO_FORWARDING: [
