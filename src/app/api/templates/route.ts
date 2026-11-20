@@ -1,6 +1,6 @@
 import { handle, formBody, ok } from "@/lib/api";
 import { requireUser, HttpError } from "@/lib/auth";
-import { saveTemplate, setTemplateActive } from "@/lib/services/content";
+import { saveTemplate, deleteTemplate, setTemplateActive } from "@/lib/services/content";
 
 export async function POST(req: Request) {
   return handle(async () => {
@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     const id = String(fd.get("id") || "");
     if (action === "create") await saveTemplate(u, fd);
     else if (action === "update") await saveTemplate(u, fd, id);
+    else if (action === "delete") await deleteTemplate(u, id);
     else if (action === "toggle") await setTemplateActive(u, id, fd.get("active") === "1");
     else throw new HttpError(400, "Aksi tidak dikenal.");
     return ok();

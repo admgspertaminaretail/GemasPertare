@@ -30,9 +30,10 @@ import {
   ShieldCheck,
   Sparkles,
   Stamp,
+  Trash2,
 } from "lucide-react";
 import { Empty } from "../ui/kit";
-import { Modal } from "../ui/Modal";
+import { Modal, ConfirmModal } from "../ui/Modal";
 import { FilePreview, PreviewTarget } from "../ui/FilePreview";
 import { Mascot } from "../art/Mascot";
 import { useToast } from "../ui/Toast";
@@ -110,6 +111,21 @@ const CAT_COLORS: Record<string, { iconBg: string; chip: string; bar: string; Ic
   "Manual Book": { iconBg: "bg-teal-600 text-white", chip: "bg-teal-50 text-teal-700 ring-teal-200", bar: "#0D9488", Icon: FileSpreadsheet },
 };
 
+const EXTRA_PALETTES = [
+  { iconBg: "bg-purple-600 text-white", chip: "bg-purple-50 text-purple-700 ring-purple-200", bar: "#9333EA", Icon: FileText },
+  { iconBg: "bg-rose-600 text-white", chip: "bg-rose-50 text-rose-700 ring-rose-200", bar: "#E11D48", Icon: FileText },
+  { iconBg: "bg-cyan-600 text-white", chip: "bg-cyan-50 text-cyan-700 ring-cyan-200", bar: "#0891B2", Icon: FileText },
+  { iconBg: "bg-orange-600 text-white", chip: "bg-orange-50 text-orange-700 ring-orange-200", bar: "#EA580C", Icon: FileText },
+  { iconBg: "bg-emerald-600 text-white", chip: "bg-emerald-50 text-emerald-700 ring-emerald-200", bar: "#059669", Icon: FileText },
+];
+
+function getCategoryStyle(catName: string) {
+  if (CAT_COLORS[catName]) return CAT_COLORS[catName];
+  let hash = 0;
+  for (let i = 0; i < (catName || "").length; i++) hash = (hash + catName.charCodeAt(i)) % EXTRA_PALETTES.length;
+  return EXTRA_PALETTES[hash] || EXTRA_PALETTES[0];
+}
+
 export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean }) {
   const router = useRouter();
   const toast = useToast();
@@ -118,31 +134,41 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
   const [chartTab, setChartTab] = useState<"siklus" | "pustaka">("siklus");
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
   const [edit, setEdit] = useState<{ id?: string; form: typeof blank } | null>(null);
+  const [isCustomCat, setIsCustomCat] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
+  const [toDelete, setToDelete] = useState<Doc | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   const cats = useMemo(() => {
-    const present = new Set(docs.map((d) => d.category));
+    const present = new Set(docs.map((d) => d.category).filter(Boolean));
     const ordered = KNOWLEDGE_CATEGORIES.filter((c) => present.has(c));
     for (const c of present) if (!ordered.includes(c)) ordered.push(c);
     return ordered;
   }, [docs]);
 
-  const categoryChartData = useMemo(
-    () =>
-      KNOWLEDGE_CATEGORIES.map((c) => ({
+  const categoryChartData = useMemo(() => {
+    const presentCats = Array.from(new Set(docs.map((d) => d.category).filter(Boolean)));
+    const all = [...KNOWLEDGE_CATEGORIES];
+    for (const c of presentCats) {
+      if (!all.includes(c)) all.push(c);
+    }
+    return all
+      .map((c) => ({
         category: c,
         short:
           c === "Jadwal Retensi (JRDP)"
             ? "JRDP"
             : c === "Sprint (Surat Perintah)"
               ? "Sprint"
-              : c,
+              : c.length > 12
+                ? c.slice(0, 10) + "…"
+                : c,
         jumlah: docs.filter((d) => d.category === c).length,
-        color: CAT_COLORS[c]?.bar || "#006CB7",
-      })),
-    [docs]
-  );
+        color: getCategoryStyle(c).bar,
+      }))
+      .filter((x) => x.jumlah > 0 || KNOWLEDGE_CATEGORIES.includes(x.category));
+  }, [docs]);
 
   const list = docs.filter(
     (d) =>
@@ -161,17 +187,43 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
 
   const save = async () => {
     if (!edit) return;
+    const finalCategory = isCustomCat && customCategory.trim() ? customCategory.trim() : edit.form.category;
+    if (!finalCategory) {
+      toast("error", "Kategori dokumen wajib ditentukan.");
+      return;
+    }
     const fd = new FormData();
     fd.set("action", edit.id ? "update" : "create");
     if (edit.id) fd.set("id", edit.id);
     Object.entries(edit.form).forEach(([k, v]) => fd.set(k, v));
+    fd.set("category", finalCategory);
     if (file) fd.set("file", file);
     setBusy(true);
     try {
       const r = await api("/api/knowledge", fd);
-      toast("success", `Dokumen disimpan. Status AI: ${r.ai}`);
+      toast("success", `Dokumen "${edit.form.title}" berhasil disimpan. ${r.ai ? `Status AI: ${r.ai}` : ""}`);
       setEdit(null);
       setFile(null);
+      setIsCustomCat(false);
+      setCustomCategory("");
+      router.refresh();
+    } catch (e: any) {
+      toast("error", e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doDelete = async () => {
+    if (!toDelete) return;
+    setBusy(true);
+    const fd = new FormData();
+    fd.set("action", "delete");
+    fd.set("id", toDelete.doc_id);
+    try {
+      await api("/api/knowledge", fd);
+      toast("success", `Dokumen "${toDelete.title}" berhasil dihapus.`);
+      setToDelete(null);
       router.refresh();
     } catch (e: any) {
       toast("error", e.message);
@@ -351,6 +403,41 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
         </div>
       </section>
 
+      {/* BANNER KHUSUS HAK AKSES ADMIN GS */}
+      {canManage && (
+        <div className="card flex flex-wrap items-center justify-between gap-4 border border-blue-200/80 bg-gradient-to-r from-blue-50/90 via-softblue to-white p-4.5 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-white shadow-sm ring-2 ring-blue-200">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-navy">Hak Akses Admin GS — Pengelolaan Pusat Informasi</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                  Akses Aktif
+                </span>
+              </div>
+              <p className="text-xs text-slate-600">
+                Tambah kolom / kartu informasi baru, atur kategori kustom, unggah berkas acuan resmi, atau hapus dokumen sesuai kebutuhan.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn-primary flex items-center gap-2 shadow-sm"
+            onClick={() => {
+              setEdit({ form: { ...blank } });
+              setIsCustomCat(false);
+              setCustomCategory("");
+              setFile(null);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            <span>Tambah Kolom / Dokumen Baru</span>
+          </button>
+        </div>
+      )}
+
       {/* FILTER & PENCARIAN DOKUMEN */}
       <div className="card flex flex-wrap items-center gap-3 p-3">
         <div className="relative min-w-[220px] flex-1">
@@ -381,6 +468,8 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
             className="btn-primary"
             onClick={() => {
               setEdit({ form: { ...blank } });
+              setIsCustomCat(false);
+              setCustomCategory("");
               setFile(null);
             }}
           >
@@ -399,12 +488,7 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.map((d) => {
             const has = !!d.storage_ref;
-            const style = CAT_COLORS[d.category] || {
-              iconBg: "bg-brand text-white",
-              chip: "bg-softblue text-brand ring-blue-100",
-              bar: "#006CB7",
-              Icon: FileText,
-            };
+            const style = getCategoryStyle(d.category);
             const CatIcon = style.Icon;
             return (
               <article key={d.doc_id} className="card flex flex-col p-5 transition hover:shadow-pop">
@@ -457,11 +541,12 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
                       <button
                         className="btn-ghost btn-sm"
                         onClick={() => {
+                          const isKnown = KNOWLEDGE_CATEGORIES.includes(d.category);
                           setEdit({
                             id: d.doc_id,
                             form: {
                               title: d.title,
-                              category: KNOWLEDGE_CATEGORIES.includes(d.category) ? d.category : KNOWLEDGE_CATEGORIES[0],
+                              category: isKnown ? d.category : "Lainnya",
                               description: d.description,
                               version: d.version,
                               managed_by: d.managed_by,
@@ -469,8 +554,11 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
                               use_for_ai: d.use_for_ai || "1",
                             },
                           });
+                          setIsCustomCat(!isKnown);
+                          setCustomCategory(!isKnown ? d.category : "");
                           setFile(null);
                         }}
+                        title="Ubah dokumen"
                       >
                         <Pencil className="h-4 w-4" />
                         {has ? "Ubah" : "Unggah File"}
@@ -485,6 +573,15 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
                           <RefreshCw className="h-4 w-4" />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 ring-1 ring-rose-200"
+                        onClick={() => setToDelete(d)}
+                        title="Hapus dokumen"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Hapus
+                      </button>
                     </>
                   )}
                 </div>
@@ -499,13 +596,17 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
       <Modal
         open={!!edit}
         onClose={() => setEdit(null)}
-        title={edit?.id ? "Ubah Dokumen Pusat Informasi" : "Tambah Dokumen Pusat Informasi"}
+        title={edit?.id ? "Ubah Dokumen Pusat Informasi" : "Tambah Dokumen / Kolom Informasi"}
         footer={
           <>
             <button className="btn-ghost" onClick={() => setEdit(null)} disabled={busy}>
               Batal
             </button>
-            <button className="btn-primary" onClick={save} disabled={busy || !edit?.form.title}>
+            <button
+              className="btn-primary"
+              onClick={save}
+              disabled={busy || !edit?.form.title || (isCustomCat && !customCategory.trim())}
+            >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}Simpan
             </button>
           </>
@@ -514,31 +615,51 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
         {edit && (
           <div className="space-y-3">
             <div>
-              <label className="label">Judul *</label>
+              <label className="label">Judul Dokumen *</label>
               <input
                 className="input"
+                placeholder="mis. Pedoman Tata Kelola Kearsipan Terbaru"
                 value={edit.form.title}
                 onChange={(e) => setEdit({ ...edit, form: { ...edit.form, title: e.target.value } })}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Kategori</label>
+                <label className="label">Kategori Dokumen *</label>
                 <select
                   className="input"
-                  value={edit.form.category}
-                  onChange={(e) => setEdit({ ...edit, form: { ...edit.form, category: e.target.value } })}
+                  value={isCustomCat ? "__custom__" : edit.form.category}
+                  onChange={(e) => {
+                    if (e.target.value === "__custom__") {
+                      setIsCustomCat(true);
+                    } else {
+                      setIsCustomCat(false);
+                      setEdit({ ...edit, form: { ...edit.form, category: e.target.value } });
+                    }
+                  }}
                 >
                   {KNOWLEDGE_CATEGORIES.map((c) => (
-                    <option key={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
+                  <option value="__custom__">+ Kategori Baru (Kustom)...</option>
                 </select>
+                {isCustomCat && (
+                  <input
+                    className="input mt-2 border-brand focus:ring-brand"
+                    placeholder="Ketik kategori baru (mis. SOP, Kebijakan)..."
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    required
+                  />
+                )}
               </div>
               <div>
                 <label className="label">Versi</label>
                 <input
                   className="input"
-                  placeholder="mis. 2.0"
+                  placeholder="mis. 1.0 atau 2026"
                   value={edit.form.version}
                   onChange={(e) => setEdit({ ...edit, form: { ...edit.form, version: e.target.value } })}
                 />
@@ -564,16 +685,17 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
               </div>
             </div>
             <div>
-              <label className="label">Deskripsi</label>
+              <label className="label">Deskripsi Ringkas</label>
               <textarea
                 className="input min-h-[70px]"
+                placeholder="Penjelasan singkat isi dokumen..."
                 value={edit.form.description}
                 onChange={(e) => setEdit({ ...edit, form: { ...edit.form, description: e.target.value } })}
               />
             </div>
             <div>
               <label className="label">
-                File (PDF/Excel/Word){edit.id ? " — kosongkan jika tidak diganti" : " *"}
+                File Dokumen (PDF/Excel/Word) — <span className="font-normal text-slate-500">Opsional</span>
               </label>
               <input
                 type="file"
@@ -581,6 +703,9 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
                 className="input"
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
               />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Bisa disimpan tanpa berkas (GEMAS otomatis membuatkan ringkasan digital PDF resmi), atau unggah berkas Anda.
+              </p>
             </div>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -596,6 +721,17 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        open={!!toDelete}
+        onClose={() => setToDelete(null)}
+        onConfirm={doDelete}
+        busy={busy}
+        danger
+        confirmLabel="Ya, Hapus Dokumen"
+        title="Hapus Dokumen Pusat Informasi?"
+        message={`Dokumen "${toDelete?.title || ""}" akan dihapus permanen dari Pusat Informasi Arsip dan basis data GEMAS.`}
+      />
     </div>
   );
 }

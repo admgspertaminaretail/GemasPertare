@@ -1,6 +1,6 @@
 import { handle, formBody, ok } from "@/lib/api";
 import { requireUser, HttpError } from "@/lib/auth";
-import { saveKnowledge, reindexKnowledge } from "@/lib/services/content";
+import { saveKnowledge, deleteKnowledge, reindexKnowledge } from "@/lib/services/content";
 
 export const maxDuration = 60;
 
@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     const id = String(fd.get("id") || "");
     if (action === "create") return ok(await saveKnowledge(u, fd));
     if (action === "update") return ok(await saveKnowledge(u, fd, id));
+    if (action === "delete") return ok(await deleteKnowledge(u, id));
     if (action === "reindex") return ok({ ai: await reindexKnowledge(u, id) });
     throw new HttpError(400, "Aksi tidak dikenal.");
   });

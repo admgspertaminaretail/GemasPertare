@@ -24,26 +24,57 @@ export async function saveTemplate(u: SessionUser, fd: FormData, editId?: string
   const store = await getStore();
   const name = str(fd, "name");
   if (name.length < 3) throw new HttpError(400, "Nama template wajib diisi.");
-  const category = str(fd, "category");
-  if (!TEMPLATE_CATEGORIES.includes(category)) throw new HttpError(400, "Kategori tidak valid.");
-  const version = str(fd, "version");
-  if (!version) throw new HttpError(400, "Versi template wajib diisi.");
+  const category = str(fd, "category") || "Lainnya";
+  const version = str(fd, "version") || "1.0";
   const file = fileOf(fd, "file");
-  if (!editId && !file) throw new HttpError(400, "File template wajib diunggah.");
-  const patch: Partial<Row> = { name, category, version, description: str(fd, "description"), usage_info: str(fd, "usage_info"), updated_at: nowIso(), updated_by: u.name, is_demo: "0" };
+  const patch: Partial<Row> = {
+    name,
+    category,
+    version,
+    description: str(fd, "description"),
+    usage_info: str(fd, "usage_info"),
+    updated_at: nowIso(),
+    updated_by: u.name,
+    is_demo: "0",
+  };
   if (file) {
     const v = await validateUpload(file, "document", "File template");
-    Object.assign(patch, { file_name: v.name, mime: v.mime, size: String(v.size), storage_ref: await saveFile(v, "templates", { title: `${name} v${version}`, entityId: editId || "TEMPLATE", uploadedBy: u.name }) });
+    Object.assign(patch, {
+      file_name: v.name,
+      mime: v.mime,
+      size: String(v.size),
+      storage_ref: await saveFile(v, "templates", {
+        title: `${name} v${version}`,
+        entityId: editId || "TEMPLATE",
+        uploadedBy: u.name,
+      }),
+    });
   }
   if (editId) {
-    if (!(await store.list("TEMPLATES")).some((t) => t.template_id === editId)) throw new HttpError(404, "Template tidak ditemukan.");
+    if (!(await store.list("TEMPLATES")).some((t) => t.template_id === editId))
+      throw new HttpError(404, "Template tidak ditemukan.");
     await store.update("TEMPLATES", editId, patch);
     await logActivity(u, "UBAH_TEMPLATE", "TEMPLATE", editId, `${name} v${version}`);
   } else {
+    if (!file) {
+      patch.file_name = `${name.replace(/[^\w.\- ()]/g, "_")}.pdf`;
+      patch.mime = "application/pdf";
+      patch.size = "0";
+    }
     const id = nextId("TPL", await store.list("TEMPLATES"), "template_id");
     await store.insert("TEMPLATES", [{ template_id: id, status: "Aktif", ...patch } as Row]);
     await logActivity(u, "TAMBAH_TEMPLATE", "TEMPLATE", id, `${name} v${version}`);
   }
+}
+
+export async function deleteTemplate(u: SessionUser, id: string) {
+  must(u);
+  const store = await getStore();
+  const existing = (await store.list("TEMPLATES")).find((t) => t.template_id === id);
+  if (!existing) throw new HttpError(404, "Template tidak ditemukan.");
+  await store.deleteWhere("TEMPLATES", (r) => r.template_id === id);
+  await logActivity(u, "HAPUS_TEMPLATE", "TEMPLATE", id, existing.name);
+  return { id };
 }
 
 export async function setTemplateActive(u: SessionUser, id: string, active: boolean) {
@@ -81,30 +112,79 @@ export async function saveKnowledge(u: SessionUser, fd: FormData, editId?: strin
   const store = await getStore();
   const title = str(fd, "title");
   if (title.length < 3) throw new HttpError(400, "Judul dokumen wajib diisi.");
-  const category = str(fd, "category");
-  if (!KNOWLEDGE_CATEGORIES.includes(category)) throw new HttpError(400, "Kategori tidak valid.");
+  const category = str(fd, "category") || "Lainnya";
   const file = fileOf(fd, "file");
   const patch: Partial<Row> = {
-    title, category, description: str(fd, "description"), version: str(fd, "version"), managed_by: str(fd, "managed_by") || "Admin PAM",
-    status: str(fd, "status") === "Tidak Berlaku" ? "Tidak Berlaku" : "Aktif", use_for_ai: str(fd, "use_for_ai") === "0" ? "0" : "1", is_demo: "0",
+    title,
+    category,
+    description: str(fd, "description"),
+    version: str(fd, "version") || "1.0",
+    managed_by: str(fd, "managed_by") || "Admin GS / PAM",
+    status: str(fd, "status") === "Tidak Berlaku" ? "Tidak Berlaku" : "Aktif",
+    use_for_ai: str(fd, "use_for_ai") === "0" ? "0" : "1",
+    is_demo: "0",
   };
   if (file) {
     const v = await validateUpload(file, "document", "File dokumen");
-    Object.assign(patch, { file_name: v.name, mime: v.mime, size: String(v.size), storage_ref: await saveFile(v, "knowledge", { title, entityId: editId || "KNOWLEDGE", uploadedBy: u.name }), uploaded_at: nowIso() });
+    Object.assign(patch, {
+      file_name: v.name,
+      mime: v.mime,
+      size: String(v.size),
+      storage_ref: await saveFile(v, "knowledge", {
+        title,
+        entityId: editId || "KNOWLEDGE",
+        uploadedBy: u.name,
+      }),
+      uploaded_at: nowIso(),
+    });
   }
   let id = editId || "";
   if (editId) {
-    if (!(await store.list("KNOWLEDGE_DOCUMENTS")).some((d) => d.doc_id === editId)) throw new HttpError(404, "Dokumen tidak ditemukan.");
+    if (!(await store.list("KNOWLEDGE_DOCUMENTS")).some((d) => d.doc_id === editId))
+      throw new HttpError(404, "Dokumen tidak ditemukan.");
     await store.update("KNOWLEDGE_DOCUMENTS", editId, patch);
     await logActivity(u, "UBAH_DOKUMEN_INFO", "KNOWLEDGE", editId, title);
   } else {
-    if (!file) throw new HttpError(400, "File dokumen wajib diunggah.");
     id = nextId("KD", await store.list("KNOWLEDGE_DOCUMENTS"), "doc_id");
-    await store.insert("KNOWLEDGE_DOCUMENTS", [{ doc_id: id, size: "0", storage_ref: "", ai_status: "", ...patch } as Row]);
+    if (!file) {
+      patch.file_name = `${title.replace(/[^\w.\- ()]/g, "_")}.pdf`;
+      patch.mime = "application/pdf";
+      patch.size = "0";
+      patch.uploaded_at = nowIso();
+    }
+    await store.insert("KNOWLEDGE_DOCUMENTS", [
+      {
+        doc_id: id,
+        size: patch.size || "0",
+        storage_ref: patch.storage_ref || "",
+        ai_status: file ? "" : "Ringkasan Digital",
+        ...patch,
+      } as Row,
+    ]);
     await logActivity(u, "TAMBAH_DOKUMEN_INFO", "KNOWLEDGE", id, title);
   }
-  const ai = await ingestDocument(id);
+  let ai = "";
+  if (patch.storage_ref) {
+    try {
+      ai = await ingestDocument(id);
+    } catch {
+      ai = "Gagal indeks AI";
+    }
+  } else {
+    ai = "Ringkasan Digital Aktif";
+  }
   return { id, ai };
+}
+
+export async function deleteKnowledge(u: SessionUser, id: string) {
+  must(u);
+  const store = await getStore();
+  const existing = (await store.list("KNOWLEDGE_DOCUMENTS")).find((d) => d.doc_id === id);
+  if (!existing) throw new HttpError(404, "Dokumen tidak ditemukan.");
+  await store.deleteWhere("KNOWLEDGE_DOCUMENTS", (r) => r.doc_id === id);
+  await store.deleteWhere("AI_KNOWLEDGE_BASE", (r) => r.doc_id === id);
+  await logActivity(u, "HAPUS_DOKUMEN_INFO", "KNOWLEDGE", id, existing.title);
+  return { id };
 }
 
 export async function reindexKnowledge(u: SessionUser, id: string) {
