@@ -6,7 +6,8 @@ import { Empty } from "./kit";
 
 export interface Col<T> {
   key: string;
-  header: string;
+  header: string | ReactNode;
+  exportHeader?: string;
   align?: "right" | "center";
   render?: (r: T) => ReactNode;
   value?: (r: T) => string | number; // untuk sort & ekspor
@@ -47,7 +48,8 @@ export function DataTable<T extends Record<string, any>>({
 
   const exportCsv = () => {
     const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [columns.map((c) => esc(c.header)).join(","), ...filtered.map((r) => columns.map((c) => esc(val(c, r))).join(","))].join("\r\n");
+    const headerTitle = (c: Col<T>) => c.exportHeader || (typeof c.header === "string" ? c.header : c.key);
+    const csv = [columns.map((c) => esc(headerTitle(c))).join(","), ...filtered.map((r) => columns.map((c) => esc(val(c, r))).join(","))].join("\r\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
     a.download = `${exportName || "data"}.csv`;
@@ -82,9 +84,9 @@ export function DataTable<T extends Record<string, any>>({
               <tr>
                 {columns.map((c) => (
                   <th key={c.key} className={`th ${c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : ""} ${c.className || ""}`}>
-                    <button className="inline-flex items-center gap-1 uppercase whitespace-nowrap" onClick={() => setSort(sort?.key === c.key ? { key: c.key, dir: sort.dir === 1 ? -1 : 1 } : { key: c.key, dir: 1 })}>
-                      {c.header}
-                      {sort?.key === c.key && (sort.dir === 1 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+                    <button className={`inline-flex items-center gap-1 uppercase leading-snug py-0.5 ${c.align === "right" ? "justify-end w-full" : c.align === "center" ? "justify-center w-full" : ""}`} onClick={() => setSort(sort?.key === c.key ? { key: c.key, dir: sort.dir === 1 ? -1 : 1 } : { key: c.key, dir: 1 })}>
+                      <span>{c.header}</span>
+                      {sort?.key === c.key && (sort.dir === 1 ? <ArrowUp className="h-3 w-3 shrink-0" /> : <ArrowDown className="h-3 w-3 shrink-0" />)}
                     </button>
                   </th>
                 ))}
@@ -95,7 +97,7 @@ export function DataTable<T extends Record<string, any>>({
                 <tr key={rowKey(r)} className="transition hover:bg-softblue/40">
                   {columns.map((c, i) => (
                     <td key={c.key} className={`td ${c.align === "right" ? "text-right tabular-nums" : c.align === "center" ? "text-center" : ""} ${c.className || ""}`}>
-                      {i === 0 && rowHref ? <Link href={rowHref(r)} className="font-semibold text-brand hover:underline">{c.render ? c.render(r) : String(val(c, r))}</Link> : c.render ? c.render(r) : String(val(c, r) || "-")}
+                      {i === 0 && rowHref ? <Link href={rowHref(r)} className="block font-semibold text-brand hover:underline whitespace-nowrap">{c.render ? c.render(r) : String(val(c, r))}</Link> : c.render ? c.render(r) : String(val(c, r) || "-")}
                     </td>
                   ))}
                 </tr>
