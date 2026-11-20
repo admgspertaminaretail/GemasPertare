@@ -87,7 +87,9 @@ export function TemplatesView({ rows, canManage }: { rows: T[]; canManage: boole
                     <h3 className="font-bold leading-snug text-navy">{t.name}</h3>
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       <span className="chip bg-softblue text-brand ring-blue-100">{t.category}</span>
-                      <span className={`chip ${t.status === "Aktif" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>{t.status}</span>
+                      {t.status && t.status !== "Aktif" && (
+                        <span className="chip bg-slate-100 text-slate-500 ring-slate-200">{t.status}</span>
+                      )}
                       {t.is_demo === "1" && <DemoTag />}
                     </div>
                   </div>

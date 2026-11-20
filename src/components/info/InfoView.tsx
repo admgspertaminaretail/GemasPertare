@@ -416,15 +416,11 @@ export function InfoView({ docs, canManage }: { docs: Doc[]; canManage: boolean 
                     <h3 className="font-bold leading-snug text-navy">{d.title}</h3>
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       <span className={`chip ${style.chip}`}>{d.category}</span>
-                      <span
-                        className={`chip ${
-                          d.status === "Aktif"
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                            : "bg-slate-100 text-slate-500 ring-slate-200"
-                        }`}
-                      >
-                        {d.status}
-                      </span>
+                      {d.status && d.status !== "Aktif" && (
+                        <span className="chip bg-slate-100 text-slate-500 ring-slate-200">
+                          {d.status}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
