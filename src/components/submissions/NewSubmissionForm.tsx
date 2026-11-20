@@ -258,42 +258,57 @@ export function NewSubmissionForm({
           </div>
 
           {latestIbos ? (
-            <div className="space-y-1.5">
-              <a
-                href={`/api/files/ibos/${latestIbos.extract_id}?download=1`}
-                className="group flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-brand to-brand-700 p-3.5 text-left text-white shadow-card transition hover:opacity-95"
-                title={`Unduh ${latestIbos.file_name} (${latestIbos.title})`}
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-                  <Download className="h-5 w-5 transition group-hover:translate-y-0.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate text-xs font-black uppercase tracking-wide">
+            <div className="space-y-2">
+              <div className="rounded-2xl bg-gradient-to-br from-brand via-brand-700 to-navy p-3.5 text-white shadow-card ring-1 ring-white/10">
+                {/* Header: Label dan Bulan */}
+                <div className="flex items-center justify-between gap-2 border-b border-white/15 pb-2.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="truncate text-xs font-black uppercase tracking-wider text-white">
                       Data Tarikan i-BOS
                     </span>
-                    <span className="rounded-full bg-amber-300 px-2 py-0.2 text-[10px] font-black text-navy">
-                      {fmtPeriod(latestIbos.period)}
-                    </span>
                   </div>
-                  <div className="mt-0.5 truncate text-xs font-bold text-white">
-                    Download File Bulan Ini (.xlsx)
-                  </div>
-                  <div className="text-[11px] text-white/75">
-                    {fmtSize(latestIbos.size)} · Klik langsung unduh
-                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-amber-300 px-2.5 py-0.5 text-[11px] font-black text-navy shadow-sm">
+                    <Calendar className="h-3 w-3 text-navy/80 shrink-0" />
+                    {fmtPeriod(latestIbos.period)}
+                  </span>
                 </div>
-              </a>
-              <div className="flex items-center justify-between px-1 text-[11px] text-slate-400">
-                <span>Diperbarui otomatis oleh Admin GS</span>
-                <button
-                  type="button"
-                  onClick={() => setOpenIbos(true)}
-                  className="font-bold text-brand hover:underline inline-flex items-center gap-1"
+
+                {/* Main Action Area: Download */}
+                <a
+                  href={`/api/files/ibos/${latestIbos.extract_id}?download=1`}
+                  className="group mt-2.5 flex items-center gap-3 rounded-xl bg-white/10 p-2.5 ring-1 ring-white/20 transition hover:bg-white/20 hover:ring-white/40"
+                  title={`Unduh ${latestIbos.file_name} (${latestIbos.title})`}
                 >
-                  <Eye className="h-3 w-3" />
-                  Preview Isi
-                </button>
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand shadow-sm transition group-hover:scale-105">
+                    <Download className="h-5 w-5 transition group-hover:translate-y-0.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-black text-white group-hover:text-amber-200 transition">
+                      Download File Bulan Ini (.xlsx)
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-white">
+                      <span className="font-extrabold text-amber-200">
+                        {fmtSize(latestIbos.size)}
+                      </span>
+                      <span className="text-white/60">•</span>
+                      <span className="text-white/95">Klik langsung unduh</span>
+                    </div>
+                  </div>
+                </a>
+
+                {/* Footer preview info */}
+                <div className="mt-2.5 flex items-center justify-between pt-0.5 text-[11px]">
+                  <span className="text-[10px] text-white/75">Diperbarui oleh Admin GS</span>
+                  <button
+                    type="button"
+                    onClick={() => setOpenIbos(true)}
+                    className="inline-flex items-center gap-1 font-bold text-amber-300 hover:text-white transition"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview Berkas
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
