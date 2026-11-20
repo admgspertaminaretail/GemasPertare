@@ -215,13 +215,11 @@ export function LoginForm({
       {/* Kolom Kiri: Ilustrasi & Identitas Brand */}
       <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-brand via-brand-600 to-navy p-10 text-white lg:flex">
         <div className="flex items-center">
-          <div className="inline-flex items-center rounded-xl bg-white px-3.5 py-1.5 shadow-sm">
-            <img
-              src="/brand/logo-pertamina-retail.png"
-              alt="Pertamina Retail"
-              className="h-10 w-auto object-contain"
-            />
-          </div>
+          <img
+            src="/brand/logo-pertamina-retail.png?v=2"
+            alt="Pertamina Retail"
+            className="h-12 w-auto object-contain"
+          />
         </div>
         <div>
           <SpbuScene className="mx-auto w-full max-w-[560px] drop-shadow-2xl" />
@@ -256,7 +254,7 @@ export function LoginForm({
         <div className="w-full max-w-md pt-4 lg:pt-10">
           <div className="mb-6 flex items-center justify-between lg:hidden">
             <img
-              src="/brand/logo-pertamina-retail.png"
+              src="/brand/logo-pertamina-retail.png?v=2"
               alt="Pertamina Retail"
               className="h-9 w-auto object-contain"
             />

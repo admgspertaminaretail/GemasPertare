@@ -28,5 +28,5 @@ export function GemasLogo({
 
 /** Logo korporat PT Pertamina Retail (PNG transparan di public/brand). */
 export function PertaminaLogo({ className = "h-8" }: { className?: string }) {
-  return <img src="/brand/logo-pertamina-retail.png" alt="Pertamina Retail" className={`w-auto ${className}`} />;
+  return <img src="/brand/logo-pertamina-retail.png?v=2" alt="Pertamina Retail" className={`w-auto ${className}`} />;
 }
