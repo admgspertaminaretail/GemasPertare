@@ -99,9 +99,12 @@ export function getActiveDriveFolderId(category?: string): string {
   return cfg.driveFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID || "";
 }
 
+export const DEFAULT_APPS_SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbzSJlPM0CZAW4S1fW-ftcxfFqVRJlY53Hzozuci7e3rfxwaJVuY9yLRVZSCGVdrtsw9tA/exec";
+
 export function getActiveAppsScriptUrl(): string {
   const cfg = readCloudConfig();
-  return (cfg.appsScriptUrl || process.env.GOOGLE_APPS_SCRIPT_URL || "").trim();
+  return (cfg.appsScriptUrl || process.env.GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL).trim();
 }
 
 /** Mengekstrak ID dari URL Google Drive / Google Sheets maupun ID mentah. */

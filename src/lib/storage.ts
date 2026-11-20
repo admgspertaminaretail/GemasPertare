@@ -154,6 +154,7 @@ export async function saveFile(
     if (!parentId) throw new Error("Folder Google Drive belum siap. Jalankan Inisialisasi Otomatis di menu Database & Cloud.");
 
     // Coba upload lewat Google Apps Script bridge jika URL telah dikonfigurasi
+    let lastBridgeError = "";
     const appsScriptUrl = getActiveAppsScriptUrl();
     if (appsScriptUrl) {
       try {
@@ -161,7 +162,8 @@ export async function saveFile(
         storageRef = `https://drive.google.com/file/d/${uploaded.id}/view`;
         fileUrl = uploaded.webViewLink || storageRef;
       } catch (scriptErr: any) {
-        console.error("Upload via Apps Script bridge gagal, mencoba direct Drive API:", scriptErr?.message || scriptErr);
+        lastBridgeError = String(scriptErr?.message || scriptErr);
+        console.error("Upload via Apps Script bridge gagal, mencoba direct Drive API:", lastBridgeError);
       }
     }
 
@@ -205,8 +207,9 @@ export async function saveFile(
         const msg = String(err?.response?.data?.error?.message || err?.message || err);
         if (/storageQuotaExceeded|do not have storage quota/i.test(msg)) {
           if (process.env.VERCEL) {
+            const detail = lastBridgeError ? ` (${lastBridgeError})` : "";
             throw new Error(
-              "Gagal mengunggah ke Google Drive: Service Account Google Cloud dibatasi kuota 0-byte pada akun Gmail pribadi. Pastikan Google Apps Script Bridge telah diperbarui dan aktif."
+              `Gagal mengunggah ke Google Drive: Service Account Google Cloud dibatasi kuota 0-byte pada akun Gmail pribadi. Pastikan Google Apps Script Bridge telah diperbarui dan aktif${detail}.`
             );
           }
           // Akun Gmail pribadi membatasi unggahan file biner oleh Service Account (0-byte quota);
