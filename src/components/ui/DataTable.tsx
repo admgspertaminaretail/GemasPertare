@@ -16,10 +16,10 @@ export interface Col<T> {
 export interface Filter<T> { label: string; get: (r: T) => string; options?: string[] }
 
 export function DataTable<T extends Record<string, any>>({
-  rows, columns, filters = [], searchPlaceholder = "Cari…", pageSize = 10, rowHref, emptyTitle = "Belum ada data", emptyText, toolbar, exportName, rowKey,
+  rows, columns, filters = [], searchPlaceholder = "Cari…", pageSize = 10, rowHref, emptyTitle = "Belum ada data", emptyText, toolbar, exportName, rowKey, minWidth = "min-w-[720px]",
 }: {
   rows: T[]; columns: Col<T>[]; filters?: Filter<T>[]; searchPlaceholder?: string; pageSize?: number; rowHref?: (r: T) => string;
-  emptyTitle?: string; emptyText?: string; toolbar?: ReactNode; exportName?: string; rowKey: (r: T) => string;
+  emptyTitle?: string; emptyText?: string; toolbar?: ReactNode; exportName?: string; rowKey: (r: T) => string; minWidth?: string;
 }) {
   const [q, setQ] = useState("");
   const [fv, setFv] = useState<Record<number, string>>({});
@@ -77,12 +77,12 @@ export function DataTable<T extends Record<string, any>>({
         <Empty title={rows.length ? "Tidak ada hasil" : emptyTitle} text={rows.length ? "Coba ubah kata kunci atau filter pencarian." : emptyText} />
       ) : (
         <div className="scroll-thin overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse">
+          <table className={`w-full ${minWidth} border-collapse`}>
             <thead>
               <tr>
                 {columns.map((c) => (
-                  <th key={c.key} className={`th ${c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : ""}`}>
-                    <button className="inline-flex items-center gap-1 uppercase" onClick={() => setSort(sort?.key === c.key ? { key: c.key, dir: sort.dir === 1 ? -1 : 1 } : { key: c.key, dir: 1 })}>
+                  <th key={c.key} className={`th ${c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : ""} ${c.className || ""}`}>
+                    <button className="inline-flex items-center gap-1 uppercase whitespace-nowrap" onClick={() => setSort(sort?.key === c.key ? { key: c.key, dir: sort.dir === 1 ? -1 : 1 } : { key: c.key, dir: 1 })}>
                       {c.header}
                       {sort?.key === c.key && (sort.dir === 1 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
                     </button>

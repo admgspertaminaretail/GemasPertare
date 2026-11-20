@@ -609,6 +609,7 @@ export function MonitoringDetailView({
           rowKey={(r) => r.spbu_id}
           exportName={`rincian-${currentView.key}`}
           pageSize={20}
+          minWidth="min-w-[1100px]"
           searchPlaceholder="Cari nama SPBU, kode SPBU, ID Pengajuan (SUB-0001…), kota, Region, FUPA, atau MEMO…"
           rowHref={(r) => `/dashboard/spbu/${r.spbu_id}`}
           filters={[
@@ -619,20 +620,24 @@ export function MonitoringDetailView({
             {
               key: "name",
               header: "SPBU",
+              className: "min-w-[320px] whitespace-nowrap",
               render: (r) => (
-                <span>
-                  {r.name}
+                <div className="py-0.5">
+                  <span className="font-bold text-navy hover:text-brand">
+                    {r.name}
+                  </span>
                   <span className="block text-[11px] font-normal text-slate-400">
                     {r.spbu_code}{r.city ? ` · ${r.city}` : ""}
                   </span>
-                </span>
+                </div>
               ),
               value: (r) => `${r.name} ${r.spbu_code} ${r.city}`,
             },
-            ...(isHO ? [{ key: "region_name", header: "Region" }] : []),
+            ...(isHO ? [{ key: "region_name", header: "Region", className: "whitespace-nowrap px-3" }] : []),
             {
               key: "submissionIdsText",
               header: "ID Pengajuan",
+              className: "whitespace-nowrap px-3",
               render: (r) => (r.submissionIds.length ? (
                 <div className="flex flex-wrap gap-1">
                   {r.submissionIds.map((sid) => (
@@ -648,19 +653,21 @@ export function MonitoringDetailView({
               ) : <span className="text-xs text-slate-300">-</span>),
               value: (r) => r.submissionIdsText || "ZZZ",
             },
-            { key: "total", header: "Total Pengajuan", align: "right" as const },
-            { key: "arsipTotal", header: "Baris Arsip (Excel)", align: "right" as const },
-            { key: "memoedCount", header: "Selesai (Di-Memo)", align: "right" as const },
+            { key: "total", header: "Total Pengajuan", align: "right" as const, className: "whitespace-nowrap px-3 text-right font-semibold w-28" },
+            { key: "arsipTotal", header: "Baris Arsip (Excel)", align: "right" as const, className: "whitespace-nowrap px-3 text-right font-semibold w-36" },
+            { key: "memoedCount", header: "Selesai (Di-Memo)", align: "right" as const, className: "whitespace-nowrap px-3 text-right font-semibold w-32" },
             {
               key: "lastStatus",
               header: "Status Terakhir",
+              className: "whitespace-nowrap px-3",
               render: (r) => (r.total ? <StatusBadge status={r.lastStatus} /> : <span className="text-xs text-slate-400">Belum mengajukan</span>),
             },
-            { key: "lastDate", header: "Tgl Pengajuan Terakhir" },
-            { key: "fupa", header: "Nomor FUPA" },
+            { key: "lastDate", header: "Tgl Pengajuan Terakhir", className: "whitespace-nowrap px-3" },
+            { key: "fupa", header: "Nomor FUPA", className: "whitespace-nowrap px-3" },
             {
               key: "memo",
               header: "Nomor MEMO",
+              className: "whitespace-nowrap px-3",
               render: (r) => (r.memo ? (
                 <span>
                   {r.memo}
@@ -678,6 +685,7 @@ export function MonitoringDetailView({
           rowKey={(r) => r.submission_id}
           exportName={`rincian-${currentView.key}`}
           pageSize={20}
+          minWidth="min-w-[1150px]"
           searchPlaceholder="Cari ID pengajuan (SUB-0001…), nama/kode SPBU, kota, nomor FUPA, nomor MEMO, atau keterangan…"
           toolbar={
             <button
@@ -699,12 +707,14 @@ export function MonitoringDetailView({
               key: "chrono_no",
               header: "No.",
               align: "right" as const,
+              className: "whitespace-nowrap w-12 px-2 text-right",
               render: (r) => <span className="font-mono text-xs font-bold text-slate-400">#{r.chrono_no}</span>,
               value: (r) => r.chrono_no,
             },
             {
               key: "submission_id",
               header: "ID Pengajuan",
+              className: "whitespace-nowrap px-3",
               render: (r) => (
                 <Link
                   href={`/submissions/${r.submission_id}`}
@@ -718,14 +728,16 @@ export function MonitoringDetailView({
             {
               key: "submission_date",
               header: "Tanggal",
+              className: "whitespace-nowrap px-3",
               render: (r) => <span className="font-mono text-xs font-semibold text-navy">{r.submission_date}</span>,
               value: (r) => r.submission_date,
             },
             {
               key: "spbu_name",
               header: "SPBU",
+              className: "min-w-[320px] whitespace-nowrap",
               render: (r) => (
-                <Link href={`/dashboard/spbu/${r.spbu_id}`} className="font-semibold text-navy hover:text-brand hover:underline">
+                <Link href={`/dashboard/spbu/${r.spbu_id}`} className="block py-0.5 font-bold text-navy hover:text-brand hover:underline">
                   {r.spbu_name}
                   <span className="block text-[11px] font-normal text-slate-400">
                     {r.spbu_code}{r.city ? ` · ${r.city}` : ""}
@@ -734,22 +746,24 @@ export function MonitoringDetailView({
               ),
               value: (r) => `${r.spbu_name} ${r.spbu_code} ${r.city}`,
             },
-            ...(isHO ? [{ key: "region_name", header: "Region" }] : []),
+            ...(isHO ? [{ key: "region_name", header: "Region", className: "whitespace-nowrap px-3" }] : []),
             {
               key: "revision_no",
               header: "Revisi",
               align: "center" as const,
+              className: "whitespace-nowrap w-16 px-2 text-center",
               render: (r) => (r.revision_no > 0 ? (
                 <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">R{r.revision_no}</span>
               ) : <span className="text-slate-300">-</span>),
               value: (r) => r.revision_no,
             },
-            { key: "arsip", header: "Baris Arsip (Excel)", align: "right" as const },
-            { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
-            { key: "fupa", header: "Nomor FUPA" },
+            { key: "arsip", header: "Baris Arsip (Excel)", align: "right" as const, className: "whitespace-nowrap px-3 text-right font-semibold w-36" },
+            { key: "status", header: "Status", className: "whitespace-nowrap px-3", render: (r) => <StatusBadge status={r.status} /> },
+            { key: "fupa", header: "Nomor FUPA", className: "whitespace-nowrap px-3" },
             {
               key: "memo",
               header: "Nomor MEMO",
+              className: "whitespace-nowrap px-3",
               render: (r) => (r.memo ? (
                 <span>
                   {r.memo}
@@ -761,6 +775,7 @@ export function MonitoringDetailView({
             {
               key: "forward",
               header: "MEMO ke PAM",
+              className: "whitespace-nowrap px-3",
               render: (r) => (r.forward ? (
                 <span>
                   {r.forward}
@@ -772,6 +787,7 @@ export function MonitoringDetailView({
             {
               key: "description",
               header: "Keterangan",
+              className: "min-w-[180px]",
               render: (r) => <span className="block max-w-[240px] truncate" title={r.description}>{r.description || "-"}</span>,
               value: (r) => r.description,
             },
